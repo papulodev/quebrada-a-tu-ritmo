@@ -5,16 +5,44 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Neon setup
+
+This app is linked to a Neon project through `.neon` and declares its services in `neon.ts`
+(Postgres is implicit; Neon Auth is enabled). Provisioning and env pull:
+
+```bash
+neon deploy        # applies neon.ts and pulls the branch env into .env.local
+```
+
+`neon deploy` writes `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_BRANCH`,
+`NEON_AUTH_BASE_URL`, and `NEON_AUTH_JWKS_URL`. One variable is application config and
+must be set by hand:
+
+```bash
+openssl rand -base64 32   # paste into NEON_AUTH_COOKIE_SECRET in .env.local
+```
+
+Apply the database schema (uses the direct, non-pooled connection):
+
+```bash
+pnpm db:push
+```
+
+### How the services are wired
+
+| Service | Where | Notes |
+| --- | --- | --- |
+| Postgres | `lib/db.ts` | `pg` `Pool` on the pooled `DATABASE_URL`, cached on `globalThis`, released on Vercel Fluid compute via `attachDatabasePool`. Chosen because Cache Components requires the Node.js runtime. |
+| Postgres schema | `db/schema.sql`, `scripts/db-push.mjs` | Idempotent `public.notes` table, applied with `pnpm db:push`. |
+| Neon Auth | `lib/auth/server.ts`, `app/api/auth/[...path]/route.ts` | Managed Better Auth via `@neondatabase/auth/next/server`; the browser client talks to the same-origin `/api/auth` proxy. |
+| Route protection | `proxy.ts` | Redirects unauthenticated visitors away from `/notes`. API routes check the session themselves and return 401. |
+| Notes API | `app/api/notes/route.ts` | `GET` lists the signed-in user's notes, `POST` inserts one; both return 401 without a session. |
+
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
