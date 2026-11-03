@@ -1,8 +1,9 @@
 import { defineConfig } from "@neon/config/v1";
 
 export default defineConfig({
-  // Declare your Neon services here
-  auth: true,
+  // Declare your Neon services here.
+  // Postgres is implicit; Neon Auth is out of MVP scope (PROJECT_SPEC.md §5).
+  auth: false,
   // Branch policy: per-branch tuning
   branch: (branch) => {
     if (branch.isDefault) {

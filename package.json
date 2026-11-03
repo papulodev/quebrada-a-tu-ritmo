@@ -7,13 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "db:push": "node --env-file=.env.local scripts/db-push.mjs"
   },
   "dependencies": {
     "@neon/config": "^1.9.5",
     "@neon/env": "^1.6.6",
-    "@neondatabase/auth": "0.7.0-beta",
     "@vercel/functions": "^3.10.4",
     "next": "16.4.3",
     "pg": "^8.23.1",
