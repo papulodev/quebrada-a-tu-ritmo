@@ -1,19 +1,17 @@
 import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { neonAuthBaseUrl, neonAuthCookieSecret } from "@/lib/env";
 
-const baseUrl = process.env.NEON_AUTH_BASE_URL;
-const secret = process.env.NEON_AUTH_COOKIE_SECRET;
+type NeonAuth = ReturnType<typeof createNeonAuth>;
 
-if (!baseUrl) {
-  throw new Error("NEON_AUTH_BASE_URL is not set. Run `neon deploy` to pull it into .env.local.");
+const globalForAuth = globalThis as unknown as { neonAuth?: NeonAuth };
+
+// Created on first use: `next build` imports route handlers and the proxy to
+// collect their config, and that step must not require runtime secrets.
+export function getAuth(): NeonAuth {
+  globalForAuth.neonAuth ??= createNeonAuth({
+    baseUrl: neonAuthBaseUrl(),
+    cookies: { secret: neonAuthCookieSecret() },
+  });
+
+  return globalForAuth.neonAuth;
 }
-
-if (!secret || secret.length < 32) {
-  throw new Error(
-    "NEON_AUTH_COOKIE_SECRET must be set to at least 32 characters. Generate one with `openssl rand -base64 32`.",
-  );
-}
-
-export const auth = createNeonAuth({
-  baseUrl,
-  cookies: { secret },
-});

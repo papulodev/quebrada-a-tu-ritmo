@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth/server";
-import { pool } from "@/lib/db";
+import { getAuth } from "@/lib/auth/server";
+import { getPool } from "@/lib/db";
 
 const MAX_CONTENT_LENGTH = 2000;
 
@@ -10,7 +10,7 @@ type NoteRow = {
 };
 
 async function currentUserId() {
-  const { data: session } = await auth.getSession();
+  const { data: session } = await getAuth().getSession();
   return session?.user?.id ?? null;
 }
 
@@ -21,7 +21,7 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { rows } = await pool.query<NoteRow>(
+  const { rows } = await getPool().query<NoteRow>(
     "select id, content, created_at from public.notes where user_id = $1 order by created_at desc limit 50",
     [userId],
   );
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { rows } = await pool.query<NoteRow>(
+  const { rows } = await getPool().query<NoteRow>(
     "insert into public.notes (user_id, content) values ($1, $2) returning id, content, created_at",
     [userId, content],
   );

@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { auth } from "@/lib/auth/server";
-import { pool } from "@/lib/db";
+import { getAuth } from "@/lib/auth/server";
+import { getPool } from "@/lib/db";
 import { NotesForm } from "./notes-form";
 
 type NoteRow = {
@@ -13,13 +13,13 @@ type NoteRow = {
 async function NotesBoard() {
   // Stop prerendering here: session and notes are request-time data.
   await connection();
-  const { data: session } = await auth.getSession();
+  const { data: session } = await getAuth().getSession();
 
   if (!session?.user) {
     return <p className="text-sm">You are not signed in. Go to /auth/sign-in to continue.</p>;
   }
 
-  const { rows } = await pool.query<NoteRow>(
+  const { rows } = await getPool().query<NoteRow>(
     "select id, content, created_at from public.notes where user_id = $1 order by created_at desc limit 50",
     [session.user.id],
   );

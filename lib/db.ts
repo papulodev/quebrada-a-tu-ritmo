@@ -1,17 +1,12 @@
 import { attachDatabasePool } from "@vercel/functions";
 import { Pool } from "pg";
+import { databaseUrl } from "@/lib/env";
 
 const globalForDb = globalThis as unknown as { appPool?: Pool };
 
 function createPool() {
-  const connectionString = process.env.DATABASE_URL;
-
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is not set. Run `neon deploy` to pull it into .env.local.");
-  }
-
   const pool = new Pool({
-    connectionString,
+    connectionString: databaseUrl(),
     max: 5,
     idleTimeoutMillis: 30_000,
   });
@@ -23,9 +18,11 @@ function createPool() {
   return pool;
 }
 
-// Reuse the pool across hot reloads and serverless invocations.
-export const pool = globalForDb.appPool ?? createPool();
+// Created on first use: `next build` collects route handlers and must not need
+// a database connection string to do so. Reused across hot reloads and
+// serverless invocations.
+export function getPool(): Pool {
+  globalForDb.appPool ??= createPool();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.appPool = pool;
+  return globalForDb.appPool;
 }

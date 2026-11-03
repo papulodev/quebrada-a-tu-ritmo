@@ -165,10 +165,11 @@ No poner todo en Zustand por defecto. El store no debe guardar secretos ni datos
 ### Estilos y diseño
 
 - Tailwind CSS 4.3.x; comprobar la sintaxis de v4 antes de reutilizar ejemplos de versiones anteriores.
+- daisyUI 5.7.x está aprobado como kit de UI y capa de temas (plugin de Tailwind v4). Declararlo siempre en `package.json`; nunca depender de una copia resuelta fuera del proyecto.
 - Usar tokens CSS para colores, tipografía, radios, sombras y espaciado compartidos.
 - Priorizar layouts y componentes consistentes antes que clases ad hoc repetidas.
 - Evitar estilos inline salvo valores dinámicos que no se expresen razonablemente con utilidades.
-- No sumar otra librería CSS ni un kit de UI sin aprobación.
+- No sumar otra librería CSS ni un kit de UI sin aprobación. daisyUI es la excepción aprobada: usarlo como capa de componentes y temas, sin mezclarlo con un segundo sistema de tokens propio.
 - Interfaz mobile-first, legible y accesible. Los avisos de estado no pueden distinguirse solo por color.
 - Los componentes genéricos no deben contener reglas turísticas; la lógica de negocio va en `features/`.
 
@@ -216,7 +217,7 @@ Si alguna secuencia no está implementada todavía, marcarla como pendiente en e
 
 ## 7. Política de dependencias y alcance
 
-- **No agregues, elimines ni reemplaces dependencias sin pedir aprobación explícita.** Esto incluye paquetes de UI, mapas, fechas, formularios, validación, IA, analítica y acceso a datos.
+- **No agregues, elimines ni reemplaces dependencias sin pedir aprobación explícita.** Esto incluye paquetes de UI, mapas, fechas, formularios, validación, IA, analítica y acceso a datos. daisyUI es la única dependencia de UI ya aprobada.
 - No cambiar versiones, scripts de package manager ni lockfile salvo que la tarea lo requiera.
 - No hacer upgrades masivos ni `npm audit fix --force` como parte de una tarea normal.
 - Antes de proponer una dependencia, exponer problema, tamaño/impacto, mantenimiento y alternativa sin ella.
