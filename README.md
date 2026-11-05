@@ -81,6 +81,7 @@ los tests end-to-end se corren localmente.
 | `test:e2e` | pasa en local (Chromium) |
 | `build` | pasa sin variables de entorno |
 | `db:migrate` | pasa en local contra PostgreSQL 18 en Docker (base vacía, segunda ejecución sin cambios y detección de drift) |
+| consultas de catálogo | verificadas en local contra PostgreSQL 18 en Docker (mapeo, `nulls` y entrada tratada como valor); mappers y error de configuración cubiertos por tests |
 
 ## Base de datos
 
@@ -117,6 +118,24 @@ Reglas:
 
 El catálogo turístico está modelado en `features/catalog/domain/types.ts`; la
 migración `0001_catalog.sql` replica esas tablas y restricciones.
+
+### Consultas de catálogo
+
+- `features/catalog/services/catalog-repository.ts` expone las lecturas del
+  catálogo (`listDestinations`, `findDestinationBySlug`,
+  `listExperiencesByDestination`, `listTransportOptionsBetween`). Todas usan
+  `$n`: la entrada del usuario viaja como valor, nunca como SQL.
+- `features/catalog/services/catalog-mappers.ts` traduce filas a tipos de
+  dominio y rechaza con `InvalidCatalogueRowError` cualquier valor fuera de los
+  enums controlados, para que un cambio de esquema no llegue silenciosamente a
+  la UI. Los valores desconocidos siguen siendo `null`.
+- `lib/server-only.ts` es un guard de runtime: si un Client Component importa la
+  capa de base de datos, falla con un error explícito en vez de ejecutarse en el
+  navegador. No reemplaza al paquete `server-only` (chequeo en build), que
+  requeriría aprobar una dependencia nueva.
+- Error de configuración: si falta `DATABASE_URL`, `lib/env.ts` lanza
+  `MissingEnvironmentVariableError` con un mensaje que nombra la variable y
+  nunca incluye su valor ni otros secretos.
 
 ## Estructura
 
