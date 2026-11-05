@@ -18,11 +18,30 @@ persistencia de datos de usuario en el MVP.
 
 - Node.js: la versión exacta está en `.nvmrc`.
 - pnpm: la versión exacta está en `package.json` (`packageManager`).
+- Navegadores de Playwright: solo para `pnpm run test:e2e`
+  (`pnpm exec playwright install chromium`).
 
 ```bash
 nvm use
 pnpm install --frozen-lockfile
 ```
+
+## Variables de entorno
+
+Copiar el archivo de ejemplo y completar los valores del proyecto de Neon:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Uso | Cuándo se necesita |
+| --- | --- | --- |
+| `DATABASE_URL` | Conexión agrupada que usa `lib/db.ts`. | Solo en comandos o código de servidor que tocan la base. |
+| `DATABASE_URL_UNPOOLED` | Conexión directa para `scripts/db-push.mjs`. | Opcional: el script usa `DATABASE_URL` si falta. |
+
+`.env*` está en `.gitignore`: nunca se commitean credenciales. Las variables se
+resuelven de forma lazy en tiempo de request, así que `pnpm run build` no las
+necesita.
 
 ## Comandos
 
@@ -45,6 +64,13 @@ levanta el build de producción en el puerto 3100; la primera vez requiere
 `pnpm exec playwright install`. CI ejecuta `lint`, `typecheck`, `test` y `build`;
 los tests end-to-end se corren localmente.
 
+### Servicios externos por comando
+
+| Comando | Servicios externos requeridos |
+| --- | --- |
+| `dev`, `lint`, `typecheck`, `test`, `build`, `start`, `test:e2e` | Ninguno. |
+| `db:push` | Postgres de Neon (`DATABASE_URL_UNPOOLED` o `DATABASE_URL`). |
+
 ## Estado de verificación
 
 | Comando | Estado |
@@ -54,11 +80,14 @@ los tests end-to-end se corren localmente.
 | `test` | pasa |
 | `test:e2e` | pasa en local (Chromium) |
 | `build` | pasa sin variables de entorno |
+| `db:push` | no verificado en este entorno (requiere `DATABASE_URL`) |
 
 ## Base de datos
 
-Postgres alojado en Neon. `neon.ts` declara los servicios del proyecto y
-`neon deploy` escribe las credenciales en `.env.local`.
+Postgres alojado en Neon. `neon.ts` declara los servicios del proyecto; `neon
+deploy` aplica esa configuración y, por defecto, sincroniza las variables de la
+rama (`--env-pull`). El resultado es un archivo `.env` local, excluido por
+`.gitignore`.
 
 | Servicio | Dónde | Notas |
 | --- | --- | --- |

@@ -49,9 +49,11 @@ Verificado el 2026-11-05: `typecheck` (con `next typegen`), `lint`, `test` (2 te
 - **Depende de:** QTR-001
 - **Resultado:** un colaborador puede instalar y arrancar el proyecto siguiendo el README.
 - **Criterios de aceptación:**
-  - [ ] Existe `.env.example` sin secretos.
-  - [ ] El README explica requisitos, instalación y comandos.
-  - [ ] Se documenta qué servicios externos/DB hacen falta para cada comando.
+  - [X] Existe `.env.example` sin secretos.
+  - [X] El README explica requisitos, instalación y comandos.
+  - [X] Se documenta qué servicios externos/DB hacen falta para cada comando.
+
+Verificado el 2026-11-05: `.env.example` declara `DATABASE_URL` y `DATABASE_URL_UNPOOLED` vacías (y `.gitignore` las ignora salvo la plantilla); el README cubre requisitos, setup, variables y una tabla de servicios externos por comando. `db:push` queda documentado como no verificado en este entorno por requerir una base real.
 
 ### QTR-004 — Preparar manejo tipado de errores y env
 
