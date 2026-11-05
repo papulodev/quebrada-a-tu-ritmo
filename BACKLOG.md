@@ -61,9 +61,11 @@ Verificado el 2026-11-05: `.env.example` declara `DATABASE_URL` y `DATABASE_URL_
 - **Depende de:** QTR-001
 - **Resultado:** configuración de servidor validable y errores HTTP consistentes.
 - **Criterios de aceptación:**
-  - [ ] `DATABASE_URL` se valida solo en servidor cuando el módulo DB esté activado.
-  - [ ] Los errores de endpoints tienen una estructura común sin filtrar detalles internos.
-  - [ ] No se muestran secretos en mensajes o logs.
+  - [X] `DATABASE_URL` se valida solo en servidor cuando el módulo DB esté activado.
+  - [X] Los errores de endpoints tienen una estructura común sin filtrar detalles internos.
+  - [X] No se muestran secretos en mensajes o logs.
+
+Verificado el 2026-11-05: `lib/env.ts` resuelve las variables de forma lazy (un valor vacío cuenta como faltante) y solo desde código de servidor; `lib/db.ts` aún no tiene consumidores, así que la validación se ejerce cuando se invoca `databaseUrl()`. `lib/http/errors.ts` define el envelope `{ error: { code, message } }` y colapsa todo error no reconocido en un `500 internal_error` con mensaje genérico. `lint`, `typecheck`, `test` (9 tests) y `build` pasan.
 
 ---
 

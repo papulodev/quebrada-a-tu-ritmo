@@ -5,10 +5,10 @@
 // that step must not require runtime secrets.
 
 function requireEnv(name: string): string {
-  const value = process.env[name];
+  const value = process.env[name]?.trim();
 
   if (!value) {
-    throw new Error(`${name} is not set. Run \`neon deploy\` to pull it into .env.local.`);
+    throw new Error(`${name} is not set. Add it to .env.local; see .env.example.`);
   }
 
   return value;

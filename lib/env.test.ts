@@ -23,4 +23,16 @@ describe("databaseUrl", () => {
 
     expect(() => databaseUrl()).toThrow(/^DATABASE_URL is not set/);
   });
+
+  it("treats a blank value as missing", () => {
+    process.env.DATABASE_URL = "   ";
+
+    expect(() => databaseUrl()).toThrow(/^DATABASE_URL is not set/);
+  });
+
+  it("points to .env.example instead of guessing a CLI command", () => {
+    delete process.env.DATABASE_URL;
+
+    expect(() => databaseUrl()).toThrow(/\.env\.example/);
+  });
 });
