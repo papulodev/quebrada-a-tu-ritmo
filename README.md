@@ -54,6 +54,7 @@ pnpm run test:e2e    # recorridos de navegador (Playwright)
 pnpm run build       # build de producción
 pnpm start           # ejecutar el build de producción
 pnpm run db:migrate  # aplicar migraciones pendientes de db/migrations/
+pnpm run db:seed     # cargar el catálogo de demo (repetible)
 ```
 
 `pnpm run build` no requiere variables de entorno: las variables se resuelven de
@@ -69,7 +70,7 @@ los tests end-to-end se corren localmente.
 | Comando | Servicios externos requeridos |
 | --- | --- |
 | `dev`, `lint`, `typecheck`, `test`, `build`, `start`, `test:e2e` | Ninguno. |
-| `db:migrate` | Postgres de Neon (`DATABASE_URL_UNPOOLED` o `DATABASE_URL`). |
+| `db:migrate`, `db:seed` | Postgres de Neon (`DATABASE_URL_UNPOOLED` o `DATABASE_URL`). |
 
 ## Estado de verificación
 
@@ -82,6 +83,7 @@ los tests end-to-end se corren localmente.
 | `build` | pasa sin variables de entorno |
 | `db:migrate` | pasa en local contra PostgreSQL 18 en Docker (base vacía, segunda ejecución sin cambios y detección de drift) |
 | consultas de catálogo | verificadas en local contra PostgreSQL 18 en Docker (mapeo, `nulls` y entrada tratada como valor); mappers y error de configuración cubiertos por tests |
+| `db:seed` | pasa en local contra PostgreSQL 18 en Docker (dos ejecuciones seguidas dejan 4 destinos y 6 experiencias, sin duplicados) |
 
 ## Base de datos
 
@@ -118,6 +120,22 @@ Reglas:
 
 El catálogo turístico está modelado en `features/catalog/domain/types.ts`; la
 migración `0001_catalog.sql` replica esas tablas y restricciones.
+
+### Datos de demo
+
+```bash
+pnpm run db:migrate   # primero, para crear las tablas
+pnpm run db:seed      # carga los catálogos curados
+```
+
+`scripts/db-seed.mjs` importa `features/catalog/domain/destinations.ts` y
+`features/catalog/domain/experiences.ts`, así que el seed no duplica datos: la
+misma fuente alimenta la UI y la base. Es repetible porque cada fila se inserta
+con `ON CONFLICT (id) DO UPDATE`; nunca borra filas que no estén en los
+catálogos. Los valores desconocidos (duración, precio, coordenadas, fuente) se
+guardan como `NULL` y todo queda en `needs_verification` hasta que alguien lo
+verifique contra una fuente primaria. `transport_options` queda vacía: todavía
+no hay un catálogo de transporte verificado.
 
 ### Consultas de catálogo
 

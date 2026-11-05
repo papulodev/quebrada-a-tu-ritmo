@@ -142,9 +142,11 @@ Verificado el 2026-11-05: `features/catalog/services/catalog-repository.ts` conc
 - **Depende de:** QTR-006, QTR-007, QTR-008
 - **Resultado:** base local con catálogo suficiente para generar un itinerario demostrable.
 - **Criterios de aceptación:**
-  - [ ] `pnpm run db:seed` o comando documentado carga los datos de ejemplo.
-  - [ ] El seed es repetible sin duplicar filas de forma descontrolada.
-  - [ ] Los datos de demo identifican cualquier elemento que no esté verificado.
+  - [X] `pnpm run db:seed` o comando documentado carga los datos de ejemplo.
+  - [X] El seed es repetible sin duplicar filas de forma descontrolada.
+  - [X] Los datos de demo identifican cualquier elemento que no esté verificado.
+
+Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERIENCES` desde `features/catalog/domain/`, escribe dentro de una transacción con `ON CONFLICT (id) DO UPDATE` y falla si un id se repite o una experiencia apunta a un destino inexistente. Contra PostgreSQL 18 en Docker (base vacía + `db:migrate`), dos ejecuciones seguidas reportan `Seeded 4 destination(s) and 6 experience(s).` y las tablas quedan en 4 y 6 filas, sin duplicados; `estimated_visit_minutes`, `latitude`, `longitude`, `source_*`, `estimated_duration_minutes` y `budget_level` quedan en `NULL` y las 10 filas en `needs_verification`, con `interests` como `text[]`. No se ejecutó contra la rama de Neon.
 
 ---
 
