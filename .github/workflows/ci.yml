@@ -34,6 +34,9 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Unit tests
+        run: pnpm run test
+
       # Must pass with no environment variables: build-time modules resolve
       # secrets lazily so the build never requires a database or auth config.
       - name: Build

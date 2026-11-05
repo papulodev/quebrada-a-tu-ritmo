@@ -29,7 +29,9 @@ pnpm install --frozen-lockfile
 ```bash
 pnpm run dev         # servidor local
 pnpm run lint        # lint estático
-pnpm run typecheck   # verificación de TypeScript
+pnpm run typecheck   # genera tipos de ruta y verifica TypeScript
+pnpm run test        # tests unitarios (Vitest)
+pnpm run test:e2e    # recorridos de navegador (Playwright)
 pnpm run build       # build de producción
 pnpm start           # ejecutar el build de producción
 pnpm run db:push     # aplicar db/schema.sql (requiere DATABASE_URL)
@@ -37,6 +39,21 @@ pnpm run db:push     # aplicar db/schema.sql (requiere DATABASE_URL)
 
 `pnpm run build` no requiere variables de entorno: las variables se resuelven de
 forma lazy en tiempo de request.
+
+`pnpm run test` no necesita base de datos ni red. `pnpm run test:e2e` compila y
+levanta el build de producción en el puerto 3100; la primera vez requiere
+`pnpm exec playwright install`. CI ejecuta `lint`, `typecheck`, `test` y `build`;
+los tests end-to-end se corren localmente.
+
+## Estado de verificación
+
+| Comando | Estado |
+| --- | --- |
+| `lint` | pasa |
+| `typecheck` | pasa |
+| `test` | pasa |
+| `test:e2e` | pasa en local (Chromium) |
+| `build` | pasa sin variables de entorno |
 
 ## Base de datos
 

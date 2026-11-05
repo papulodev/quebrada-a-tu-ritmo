@@ -35,10 +35,12 @@
 - **Depende de:** QTR-001
 - **Resultado:** comandos estandarizados para lint, tipos, unit tests, E2E y build.
 - **Criterios de aceptación:**
-  - [ ] `lint`, `typecheck`, `test`, `test:e2e` y `build` existen en `package.json`.
-  - [ ] Cada comando ejecuta su tarea o devuelve un bloqueo claramente documentado; no hay scripts falsos que siempre terminen en éxito.
-  - [ ] Un test de ejemplo pasa.
-  - [ ] Las herramientas necesarias forman parte de las dependencias aprobadas.
+  - [X] `lint`, `typecheck`, `test`, `test:e2e` y `build` existen en `package.json`.
+  - [X] Cada comando ejecuta su tarea o devuelve un bloqueo claramente documentado; no hay scripts falsos que siempre terminen en éxito.
+  - [X] Un test de ejemplo pasa.
+  - [X] Las herramientas necesarias forman parte de las dependencias aprobadas.
+
+Verificado el 2026-11-05: `typecheck` (con `next typegen`), `lint`, `test` (2 tests, Vitest) y `test:e2e` (1 test, Chromium sobre el build de producción en el puerto 3100) pasan; `build` pasa sin variables de entorno. CI ejecuta `lint`, `typecheck`, `test` y `build`; `test:e2e` queda fuera de CI.
 
 ### QTR-003 — Documentar setup local y variables de entorno
 
