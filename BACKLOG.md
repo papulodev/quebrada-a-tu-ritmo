@@ -23,11 +23,12 @@
 - **Depende de:** —
 - **Resultado:** aplicación Next.js App Router con TypeScript y Tailwind, ejecutable localmente.
 - **Criterios de aceptación:**
-  - [X] Existe `package.json` y `package-lock.json`.
+  - [X] Existe `package.json` y `pnpm-lock.yaml`.
   - [X] Existe una home de arranque accesible.
   - [X] `.nvmrc` registra Node 24 LTS o la versión aprobada.
   - [X] `pnpm ci` y `pnpm run dev` funcionan.
   - [X] No se agregan dependencias fuera del stack aprobado.
+    - Resuelto el 2026-11-05: se eliminó `@neon/env` (sin uso) y `@neon/config` / `@vercel/functions` quedaron declaradas como excepciones aprobadas en `AGENTS.md`.
 
 ### QTR-002 — Configurar scripts de calidad
 

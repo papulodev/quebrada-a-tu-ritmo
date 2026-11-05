@@ -25,7 +25,7 @@ Versiones consultadas el **2026-10-29**. Usar versiones estables; no usar `canar
 | Tecnología | Versión de referencia | Regla |
 |---|---|---|
 | Node.js | 24.22.2 LTS | Mantener Node 24 LTS para compatibilidad del ecosistema. Registrar la versión en `.nvmrc` o equivalente. |
-| pnpm | Versión 12.16.1 | Usar pnpm y `package-lock.json`; no mezclar con yarn sin aprobación. |
+| pnpm | Versión 12.16.1 | Usar pnpm y `pnpm-lock.yaml`; no mezclar con yarn sin aprobación. |
 | Next.js | 16.4.3 | App Router; componentes de servidor por defecto. |
 | React / React DOM | 19.3.1 | Mantener ambas versiones alineadas. |
 | TypeScript | 7.0.2 | `strict: true`; si una herramienta estable del stack no lo admite, no degradar ni reemplazar tooling silenciosamente: informar y proponer la versión compatible. |
@@ -35,7 +35,16 @@ Versiones consultadas el **2026-10-29**. Usar versiones estables; no usar `canar
 | Vitest | 5.0.5 | Tests unitarios y de dominio. |
 | Playwright | 1.64.1 | Pruebas E2E del flujo crítico. |
 
-`package.json` y `package-lock.json` son la fuente ejecutable de las versiones instaladas. Si el scaffolding genera un parche más reciente de la misma línea estable, actualizar esta tabla y el lockfile juntos. No actualizar versiones como parte de un ticket que no sea de mantenimiento.
+Excepciones aprobadas (vienen del scaffold de Neon y están atadas a la capa de datos y despliegue; no son stack de producto):
+
+| Dependencia | Versión de referencia | Regla |
+|---|---|---|
+| `@neon/config` | 1.9.5 | Solo para declarar la política de ramas de Neon en `neon.ts`. No importar desde componentes ni desde código de dominio. |
+| `@vercel/functions` | 3.10.4 | Solo para `attachDatabasePool` en `lib/db.ts` (liberar sockets en Vercel Fluid compute). Es un no-op fuera de Vercel; no usar el resto de la API. |
+
+Removerlas es posible (borrar `neon.ts` y la llamada a `attachDatabasePool`), pero implica perder gestión del pool en despliegues serverless. No agregar ningún otro paquete `@neon/*` o `@vercel/*` sin aprobación explícita.
+
+`package.json` y `pnpm-lock.yaml` son la fuente ejecutable de las versiones instaladas. Si el scaffolding genera un parche más reciente de la misma línea estable, actualizar esta tabla y el lockfile juntos. No actualizar versiones como parte de un ticket que no sea de mantenimiento.
 
 Fuentes oficiales de referencia:
 
@@ -104,7 +113,7 @@ Usar Next.js App Router y organización por funcionalidad. Estructura objetivo:
 ├── .env.example
 ├── .nvmrc
 ├── package.json
-└── package-lock.json
+└── pnpm-lock.yaml
 ```
 
 Esta es la estructura objetivo, no la obligación de crear todos los directorios en el primer commit. Crear carpetas cuando exista código real para ellas. Mantener la estructura existente si ya fue inicializada, salvo que una tarea incluya deliberadamente su cambio.
