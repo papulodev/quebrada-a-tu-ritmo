@@ -129,10 +129,12 @@ Verificado el 2026-11-05: `db/migrations/0001_catalog.sql` crea `destinations`, 
 - **Depende de:** QTR-004, QTR-008
 - **Resultado:** módulo de conexión y consultas de catálogo reutilizables.
 - **Criterios de aceptación:**
-  - [ ] Conexión disponible solo en módulos de servidor.
-  - [ ] Consultas parametrizadas; no concatenan entrada del usuario.
-  - [ ] Error de configuración controlado y documentado.
-  - [ ] Ningún secreto llega al bundle del cliente.
+  - [X] Conexión disponible solo en módulos de servidor.
+  - [X] Consultas parametrizadas; no concatenan entrada del usuario.
+  - [X] Error de configuración controlado y documentado.
+  - [X] Ningún secreto llega al bundle del cliente.
+
+Verificado el 2026-11-05: `features/catalog/services/catalog-repository.ts` concentra las lecturas del catálogo y llama a `assertServerRuntime` antes de tocar el pool; `lib/server-only.ts` lanza un error explícito si el módulo se evalúa en el navegador (el paquete `server-only` no se agregó porque AGENTS.md §7 exige aprobación para dependencias nuevas). Todas las consultas usan `$n`; probado contra PostgreSQL 18 en Docker con `findDestinationBySlug("' OR 1=1 --")`, que devuelve `null` en vez de filtrar filas. `lib/env.ts` lanza `MissingEnvironmentVariableError` con un mensaje que nombra la variable y no incluye su valor; cubierto por tests unitarios. `pnpm run build` no incluye `DATABASE_URL`, `postgres://`, `getPool` ni el repositorio en `.next/static` (grep sin coincidencias). Mappers cubiertos por tests: valores desconocidos quedan en `null` y un enum inesperado lanza `InvalidCatalogueRowError`.
 
 ### QTR-010 — Cargar datos de demo mediante seed
 
