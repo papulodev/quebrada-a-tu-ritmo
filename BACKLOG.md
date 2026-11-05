@@ -116,10 +116,12 @@ Verificado el 2026-11-05: `features/catalog/domain/experiences.ts` contiene seis
 - **Depende de:** QTR-005
 - **Resultado:** tablas iniciales del catálogo en PostgreSQL.
 - **Criterios de aceptación:**
-  - [ ] Existe migración SQL versionada para destinos, experiencias y opciones de transporte/fuentes necesarias.
-  - [ ] IDs, relaciones y restricciones están definidos.
-  - [ ] La migración se puede aplicar en una base vacía.
-  - [ ] Se documentan los pasos necesarios para ejecutarla localmente.
+  - [X] Existe migración SQL versionada para destinos, experiencias y opciones de transporte/fuentes necesarias.
+  - [X] IDs, relaciones y restricciones están definidos.
+  - [X] La migración se puede aplicar en una base vacía.
+  - [X] Se documentan los pasos necesarios para ejecutarla localmente.
+
+Verificado el 2026-11-05: `db/migrations/0001_catalog.sql` crea `destinations`, `experiences`, `transport_options` y `source_notes` con PK textual, FK con `ON DELETE RESTRICT`, unicidad de `slug`, índices por FK y CHECK para cada enum. Los valores desconocidos siguen siendo `NULL` y la base rechaza `0` como duración, precios invertidos, coordenadas sueltas, intereses fuera de la lista controlada y filas `verified` sin fuente y fecha. `scripts/db-migrate.mjs` (sin dependencias nuevas, usa `pg`) aplica los archivos pendientes en orden, dentro de una transacción, con advisory lock y checksum en `schema_migrations`; `pnpm run db:migrate` está documentado en README. Probado contra PostgreSQL 18 en Docker sobre una base vacía: primera ejecución aplica `0001`, la segunda informa "No pending migrations", editar una migración aplicada aborta con error de drift y una migración que falla revierte por completo sin dejar registro. No se ejecutó contra la rama de Neon del proyecto.
 
 ### QTR-009 — Conectar PostgreSQL desde código de servidor
 

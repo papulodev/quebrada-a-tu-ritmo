@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { Pool } from "pg";
 
+console.warn(
+  "Deprecated: db/migrations/ is the source of truth. Use `pnpm run db:migrate`.",
+);
+
 // Schema changes use the direct (non-pooled) connection.
 const connectionString = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 

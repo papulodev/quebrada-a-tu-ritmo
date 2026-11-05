@@ -37,7 +37,7 @@ cp .env.example .env.local
 | Variable | Uso | Cuándo se necesita |
 | --- | --- | --- |
 | `DATABASE_URL` | Conexión agrupada que usa `lib/db.ts`. | Solo en comandos o código de servidor que tocan la base. |
-| `DATABASE_URL_UNPOOLED` | Conexión directa para `scripts/db-push.mjs`. | Opcional: el script usa `DATABASE_URL` si falta. |
+| `DATABASE_URL_UNPOOLED` | Conexión directa para las migraciones (`scripts/db-migrate.mjs`). | Opcional: el script usa `DATABASE_URL` si falta. |
 
 `.env*` está en `.gitignore`: nunca se commitean credenciales. Las variables se
 resuelven de forma lazy en tiempo de request, así que `pnpm run build` no las
@@ -53,7 +53,7 @@ pnpm run test        # tests unitarios (Vitest)
 pnpm run test:e2e    # recorridos de navegador (Playwright)
 pnpm run build       # build de producción
 pnpm start           # ejecutar el build de producción
-pnpm run db:push     # aplicar db/schema.sql (requiere DATABASE_URL)
+pnpm run db:migrate  # aplicar migraciones pendientes de db/migrations/
 ```
 
 `pnpm run build` no requiere variables de entorno: las variables se resuelven de
@@ -69,7 +69,7 @@ los tests end-to-end se corren localmente.
 | Comando | Servicios externos requeridos |
 | --- | --- |
 | `dev`, `lint`, `typecheck`, `test`, `build`, `start`, `test:e2e` | Ninguno. |
-| `db:push` | Postgres de Neon (`DATABASE_URL_UNPOOLED` o `DATABASE_URL`). |
+| `db:migrate` | Postgres de Neon (`DATABASE_URL_UNPOOLED` o `DATABASE_URL`). |
 
 ## Estado de verificación
 
@@ -80,7 +80,7 @@ los tests end-to-end se corren localmente.
 | `test` | pasa |
 | `test:e2e` | pasa en local (Chromium) |
 | `build` | pasa sin variables de entorno |
-| `db:push` | no verificado en este entorno (requiere `DATABASE_URL`) |
+| `db:migrate` | pasa en local contra PostgreSQL 18 en Docker (base vacía, segunda ejecución sin cambios y detección de drift) |
 
 ## Base de datos
 
@@ -93,17 +93,37 @@ rama (`--env-pull`). El resultado es un archivo `.env` local, excluido por
 | --- | --- | --- |
 | Conexión | `lib/db.ts` | `pg` `Pool` sobre `DATABASE_URL`, creado en el primer uso y reutilizado vía `globalThis`. |
 | Variables de entorno | `lib/env.ts` | Acceso validado y lazy; nunca a nivel de módulo. |
-| Schema | `db/schema.sql`, `scripts/db-push.mjs` | Fuente única de la forma de la base, aplicada con `pnpm db:push`. |
+| Schema | `db/migrations/`, `scripts/db-migrate.mjs` | Migraciones versionadas; única fuente de verdad de la forma de la base. |
 
-El catálogo turístico (destinos, transporte, logística, fuentes) todavía no está
-modelado.
+### Migraciones
+
+`db/migrations/` es la fuente única de la forma de la base. Cada archivo se
+aplica una sola vez, en orden de nombre, dentro de una transacción, y queda
+registrado en `schema_migrations` con su checksum.
+
+```bash
+pnpm run db:migrate   # aplica los archivos pendientes
+```
+
+Reglas:
+
+- Nombrar los archivos `NNNN_nombre.sql` con `NNNN` incremental (`0002_…`).
+- No editar una migración ya aplicada: el runner compara checksums y aborta.
+  Para corregir algo, agregar una migración nueva.
+- El runner toma un advisory lock, así que dos ejecuciones simultáneas no se
+  pisan.
+- `db:push` y `db/schema.sql` quedan como legacy (el archivo ya no define nada);
+  se eliminan en un ticket de limpieza.
+
+El catálogo turístico está modelado en `features/catalog/domain/types.ts`; la
+migración `0001_catalog.sql` replica esas tablas y restricciones.
 
 ## Estructura
 
 ```text
 app/          rutas, layouts y Route Handlers
 lib/          acceso a datos y variables de entorno (solo servidor)
-db/           schema aplicado por scripts/db-push.mjs
+db/           migraciones SQL versionadas (db/migrations/)
 scripts/      utilidades de mantenimiento
 tests/        pruebas end-to-end
 ```
