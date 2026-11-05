@@ -90,10 +90,12 @@ Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, tr
 - **Depende de:** QTR-005
 - **Resultado:** catálogo pequeño con destinos útiles para probar distintos perfiles.
 - **Criterios de aceptación:**
-  - [ ] Incluye localidades/atractivos pertinentes como Tilcara, Purmamarca, Maimará y Humahuaca.
-  - [ ] Cada registro tiene identificador estable y descripción breve.
-  - [ ] No se inventan horarios o precios.
-  - [ ] Los datos relevantes tienen fuente y estado de verificación o se marcan pendientes.
+  - [X] Incluye localidades/atractivos pertinentes como Tilcara, Purmamarca, Maimará y Humahuaca.
+  - [X] Cada registro tiene identificador estable y descripción breve.
+  - [X] No se inventan horarios o precios.
+  - [X] Los datos relevantes tienen fuente y estado de verificación o se marcan pendientes.
+
+Verificado el 2026-11-05: `features/catalog/domain/destinations.ts` incluye Tilcara, Purmamarca, Maimará y Humahuaca con `id`/`slug` estables y descripción breve. Ningún registro declara horarios, precios, coordenadas ni duración de visita: esos campos quedan en `null` y todos los registros están en `needs_verification` con `source: null`. Pendiente antes de una demo pública: verificar descripciones contra fuentes primarias y completar `source`/`verifiedAt`.
 
 ### QTR-007 — Crear catálogo inicial de experiencias
 
