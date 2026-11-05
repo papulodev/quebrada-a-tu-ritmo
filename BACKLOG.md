@@ -125,7 +125,7 @@
 - **Depende de:** QTR-006, QTR-007, QTR-008
 - **Resultado:** base local con catálogo suficiente para generar un itinerario demostrable.
 - **Criterios de aceptación:**
-  - [ ] `npm run db:seed` o comando documentado carga los datos de ejemplo.
+  - [ ] `pnpm run db:seed` o comando documentado carga los datos de ejemplo.
   - [ ] El seed es repetible sin duplicar filas de forma descontrolada.
   - [ ] Los datos de demo identifican cualquier elemento que no esté verificado.
 
@@ -332,7 +332,7 @@
 - **Depende de:** QTR-023, QTR-027
 - **Resultado:** una prueba automatizada cubre landing → preferencias → estrategia → itinerario.
 - **Criterios de aceptación:**
-  - [ ] Se ejecuta con `npm run test:e2e`.
+  - [ ] Se ejecuta con `pnpm run test:e2e`.
   - [ ] Usa datos deterministas y no depende de servicios externos reales.
   - [ ] Comprueba que se presenta un itinerario y las advertencias pertinentes.
 
