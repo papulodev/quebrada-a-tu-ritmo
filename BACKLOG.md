@@ -103,10 +103,12 @@ Verificado el 2026-11-05: `features/catalog/domain/destinations.ts` incluye Tilc
 - **Depende de:** QTR-005, QTR-006
 - **Resultado:** lista de experiencias con duración e intereses para probar la planificación.
 - **Criterios de aceptación:**
-  - [ ] Cada experiencia referencia un destino existente.
-  - [ ] Intereses/categorías usan valores controlados.
-  - [ ] La duración puede ser desconocida; no se usa cero como valor por defecto.
-  - [ ] Cada dato variable tiene fuente/fecha o estado `needs_verification`.
+  - [X] Cada experiencia referencia un destino existente.
+  - [X] Intereses/categorías usan valores controlados.
+  - [X] La duración puede ser desconocida; no se usa cero como valor por defecto.
+  - [X] Cada dato variable tiene fuente/fecha o estado `needs_verification`.
+
+Verificado el 2026-11-05: `features/catalog/domain/experiences.ts` contiene seis experiencias y un test comprueba que cada `destinationId` existe en el catálogo de destinos. `interests` usa `Interest` y `category` usa `ExperienceCategory` (ambos uniones controladas). `estimatedDurationMinutes` y `budgetLevel` son `null` en todos los registros —nunca `0`— y cada experiencia queda en `needs_verification` sin fuente. Pendiente antes de una demo pública: verificar existencia, horarios y costos reales contra fuentes primarias.
 
 ### QTR-008 — Definir esquema SQL y migración inicial
 
