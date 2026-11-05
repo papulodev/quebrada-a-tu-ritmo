@@ -228,7 +228,7 @@ Si alguna secuencia no está implementada todavía, marcarla como pendiente en e
 
 - **No agregues, elimines ni reemplaces dependencias sin pedir aprobación explícita.** Esto incluye paquetes de UI, mapas, fechas, formularios, validación, IA, analítica y acceso a datos. daisyUI es la única dependencia de UI ya aprobada.
 - No cambiar versiones, scripts de package manager ni lockfile salvo que la tarea lo requiera.
-- No hacer upgrades masivos ni `npm audit fix --force` como parte de una tarea normal.
+- No hacer upgrades masivos ni `pnpm audit fix --force` como parte de una tarea normal.
 - Antes de proponer una dependencia, exponer problema, tamaño/impacto, mantenimiento y alternativa sin ella.
 - No implementar autenticación, pagos, integraciones en tiempo real o LLM si no hay ticket que lo autorice.
 - No inventar nuevas funcionalidades por “mejorar” la experiencia fuera del alcance del ticket actual.
