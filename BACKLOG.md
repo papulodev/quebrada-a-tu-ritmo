@@ -77,10 +77,12 @@ Verificado el 2026-11-05: `lib/env.ts` resuelve las variables de forma lazy (un 
 - **Depende de:** QTR-001
 - **Resultado:** tipos compartidos para preferencias, destinos, experiencias, transporte, estrategias y días del itinerario.
 - **Criterios de aceptación:**
-  - [ ] Los tipos están fuera de los componentes visuales.
-  - [ ] Se distinguen valores conocidos, estimados y pendientes de confirmación.
-  - [ ] No se usa `any`.
-  - [ ] El módulo se puede importar y testear sin React ni base de datos.
+  - [X] Los tipos están fuera de los componentes visuales.
+  - [X] Se distinguen valores conocidos, estimados y pendientes de confirmación.
+  - [X] No se usa `any`.
+  - [X] El módulo se puede importar y testear sin React ni base de datos.
+
+Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, transporte, notas de fuente) y `features/planner/domain/` (preferencias, estrategias, itinerario) no importan React ni acceso a datos. `ConfidenceStatus` distingue `verified`, `estimated` y `needs_verification`, y `isKnownDuration` trata `null`/`NaN`/negativos como desconocido (nunca cero). 10 tests de dominio en Vitest cubren ambos módulos. Se mantiene la estructura sin `src/` que ya usaba el scaffold, con `@/*` apuntando a la raíz.
 
 ### QTR-006 — Crear catálogo inicial curado de destinos
 
