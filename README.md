@@ -115,8 +115,6 @@ Reglas:
   Para corregir algo, agregar una migración nueva.
 - El runner toma un advisory lock, así que dos ejecuciones simultáneas no se
   pisan.
-- `db:push` y `db/schema.sql` quedan como legacy (el archivo ya no define nada);
-  se eliminan en un ticket de limpieza.
 
 El catálogo turístico está modelado en `features/catalog/domain/types.ts`; la
 migración `0001_catalog.sql` replica esas tablas y restricciones.

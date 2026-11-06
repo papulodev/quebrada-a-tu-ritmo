@@ -24,15 +24,15 @@ Versiones consultadas el **2026-10-29**. Usar versiones estables; no usar `canar
 
 | Tecnología | Versión de referencia | Regla |
 |---|---|---|
-| Node.js | 24.22.2 LTS | Mantener Node 24 LTS para compatibilidad del ecosistema. Registrar la versión en `.nvmrc` o equivalente. |
+| Node.js | 24.22.1 LTS | Mantener Node 24 LTS para compatibilidad del ecosistema. Registrar la versión en `.nvmrc` o equivalente. |
 | pnpm | Versión 12.16.1 | Usar pnpm y `pnpm-lock.yaml`; no mezclar con yarn sin aprobación. |
 | Next.js | 16.4.3 | App Router; componentes de servidor por defecto. |
-| React / React DOM | 19.3.1 | Mantener ambas versiones alineadas. |
-| TypeScript | 7.0.2 | `strict: true`; si una herramienta estable del stack no lo admite, no degradar ni reemplazar tooling silenciosamente: informar y proponer la versión compatible. |
+| React / React DOM | 19.3.0 | Mantener ambas versiones alineadas. |
+| TypeScript | 5.9.3 | `strict: true`; si una herramienta estable del stack no lo admite, no degradar ni reemplazar tooling silenciosamente: informar y proponer la versión compatible. |
 | Tailwind CSS | 4.3.x | Usar flujo de instalación de v4; no copiar configuración de v3. |
 | PostgreSQL | 18.6 | No utilizar PostgreSQL 19 RC en el MVP. |
 | Zustand | 5.0.16 | Solo para estado compartido que lo justifique. |
-| Vitest | 5.0.5 | Tests unitarios y de dominio. |
+| Vitest | 5.1.0 | Tests unitarios y de dominio. |
 | Playwright | 1.64.1 | Pruebas E2E del flujo crítico. |
 
 Excepciones aprobadas (vienen del scaffold de Neon y están atadas a la capa de datos y despliegue; no son stack de producto):

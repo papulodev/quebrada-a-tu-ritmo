@@ -134,7 +134,9 @@ Verificado el 2026-11-05: `db/migrations/0001_catalog.sql` crea `destinations`, 
   - [X] Error de configuración controlado y documentado.
   - [X] Ningún secreto llega al bundle del cliente.
 
-Verificado el 2026-11-05: `features/catalog/services/catalog-repository.ts` concentra las lecturas del catálogo y llama a `assertServerRuntime` antes de tocar el pool; `lib/server-only.ts` lanza un error explícito si el módulo se evalúa en el navegador (el paquete `server-only` no se agregó porque AGENTS.md §7 exige aprobación para dependencias nuevas). Todas las consultas usan `$n`; probado contra PostgreSQL 18 en Docker con `findDestinationBySlug("' OR 1=1 --")`, que devuelve `null` en vez de filtrar filas. `lib/env.ts` lanza `MissingEnvironmentVariableError` con un mensaje que nombra la variable y no incluye su valor; cubierto por tests unitarios. `pnpm run build` no incluye `DATABASE_URL`, `postgres://`, `getPool` ni el repositorio en `.next/static` (grep sin coincidencias). Mappers cubiertos por tests: valores desconocidos quedan en `null` y un enum inesperado lanza `InvalidCatalogueRowError`.
+Verificado el 2026-11-05: `features/catalog/services/catalog-repository.ts` concentra las lecturas del catálogo y llama a `assertServerRuntime` antes de tocar el pool; `lib/server-only.ts` lanza un error explícito si el módulo se evalúa en el navegador (el paquete `server-only` no se había agregado todavía porque AGENTS.md §7 exige aprobación para dependencias nuevas). Todas las consultas usan `$n`; probado contra PostgreSQL 18 en Docker con `findDestinationBySlug("' OR 1=1 --")`, que devuelve `null` en vez de filtrar filas. `lib/env.ts` lanza `MissingEnvironmentVariableError` con un mensaje que nombra la variable y no incluye su valor; cubierto por tests unitarios. `pnpm run build` no incluye `DATABASE_URL`, `postgres://`, `getPool` ni el repositorio en `.next/static` (grep sin coincidencias). Mappers cubiertos por tests: valores desconocidos quedan en `null` y un enum inesperado lanza `InvalidCatalogueRowError`.
+
+Actualizado el 2026-11-06: el paquete `server-only` quedó aprobado e integrado; `lib/db.ts` y `features/catalog/services/catalog-repository.ts` lo importan, se eliminaron `lib/server-only.ts` y `assertServerRuntime`, y la barrera pasó a ser de build en lugar de runtime.
 
 ### QTR-010 — Cargar datos de demo mediante seed
 
@@ -453,6 +455,8 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-008
 - **Resultado:** un único camino de migración, sin comandos ni archivos que ya no hacen nada.
 - **Criterios de aceptación:** se eliminan `scripts/db-push.mjs`, el script `db:push` de `package.json` y `db/schema.sql`; no queda ninguna referencia al puente en `README.md`, `PROJECT_SPEC.md` ni `AGENTS.md`; `db:migrate` y `db:seed` siguen documentados y verificados contra PostgreSQL local; lint, typecheck, test y build pasan.
+
+Verificado el 2026-11-06: se eliminaron `scripts/db-push.mjs`, `db/schema.sql` y el script `db:push` de `package.json`; `pnpm run db:push` responde `ERR_PNPM_NO_SCRIPT`. `grep` no encuentra referencias al puente en `README.md`, `PROJECT_SPEC.md` ni `AGENTS.md` (solo quedan menciones históricas en la nota de QTR-001 y en este ticket). `db:migrate` y `db:seed` se ejecutaron contra PostgreSQL 18.6 en Docker: `0001_catalog.sql` aplicada, segunda ejecución sin migraciones pendientes, seed idempotente con 4 destinos y 6 experiencias. `pnpm run lint`, `pnpm run typecheck`, `pnpm run test` (37/37) y `pnpm run build` pasan.
 
 ---
 
