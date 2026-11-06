@@ -76,38 +76,37 @@ Usar Next.js App Router y organización por funcionalidad. Estructura objetivo:
 │   └── icons/
 ├── db/
 │   └── migrations/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── planner/page.tsx
-│   │   ├── itinerary/page.tsx
-│   │   ├── api/
-│   │   │   ├── compare/route.ts
-│   │   │   └── itineraries/route.ts
-│   │   ├── globals.css
-│   │   └── not-found.tsx
-│   ├── components/
-│   │   ├── layout/
-│   │   └── ui/
-│   ├── features/
-│   │   ├── planner/
-│   │   │   ├── components/
-│   │   │   ├── domain/
-│   │   │   ├── services/
-│   │   │   ├── store/
-│   │   │   └── __tests__/
-│   │   ├── itinerary/
-│   │   │   ├── components/
-│   │   │   ├── domain/
-│   │   │   └── __tests__/
-│   │   ├── transport/
-│   │   └── destinations/
-│   ├── lib/
-│   │   ├── db/
-│   │   ├── env.ts
-│   │   └── utils/
-│   └── types/
+├── app/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── planner/page.tsx
+│   ├── itinerary/page.tsx
+│   ├── api/
+│   │   ├── compare/route.ts
+│   │   └── itineraries/route.ts
+│   ├── globals.css
+│   └── not-found.tsx
+├── components/
+│   ├── layout/
+│   └── ui/
+├── features/
+│   ├── planner/
+│   │   ├── components/
+│   │   ├── domain/
+│   │   ├── services/
+│   │   ├── store/
+│   │   └── __tests__/
+│   ├── itinerary/
+│   │   ├── components/
+│   │   ├── domain/
+│   │   └── __tests__/
+│   ├── transport/
+│   └── destinations/
+├── lib/
+│   ├── db/
+│   ├── env.ts
+│   └── utils/
+└── types/
 ├── tests/
 │   └── e2e/
 ├── .env.example
@@ -120,13 +119,13 @@ Esta es la estructura objetivo, no la obligación de crear todos los directorios
 
 ### Responsabilidades
 
-- `src/app/`: rutas, layouts, páginas, metadata y Route Handlers de Next.js.
-- `src/components/ui/`: componentes visuales genéricos reutilizables, sin lógica específica de negocio.
-- `src/features/<feature>/components/`: componentes propios de esa funcionalidad.
-- `src/features/<feature>/domain/`: tipos, reglas de negocio y funciones puras; no importar React ni módulos de base de datos.
-- `src/features/<feature>/services/`: coordinación de casos de uso y acceso a los repositorios del servidor.
-- `src/features/<feature>/store/`: stores Zustand solo si hay estado realmente compartido.
-- `src/lib/db/`: conexión y consultas PostgreSQL exclusivamente de servidor.
+- `/app/`: rutas, layouts, páginas, metadata y Route Handlers de Next.js.
+- `/components/ui/`: componentes visuales genéricos reutilizables, sin lógica específica de negocio.
+- `/features/<feature>/components/`: componentes propios de esa funcionalidad.
+- `/features/<feature>/domain/`: tipos, reglas de negocio y funciones puras; no importar React ni módulos de base de datos.
+- `/features/<feature>/services/`: coordinación de casos de uso y acceso a los repositorios del servidor.
+- `/features/<feature>/store/`: stores Zustand solo si hay estado realmente compartido.
+- `/lib/db/`: conexión y consultas PostgreSQL exclusivamente de servidor.
 - `db/migrations/`: migraciones SQL ordenadas y versionadas.
 - `tests/e2e/`: pruebas de recorridos críticos del navegador.
 
