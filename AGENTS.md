@@ -41,6 +41,7 @@ Excepciones aprobadas (vienen del scaffold de Neon y están atadas a la capa de 
 |---|---|---|
 | `@neon/config` | 1.9.5 | Solo para declarar la política de ramas de Neon en `neon.ts`. No importar desde componentes ni desde código de dominio. |
 | `@vercel/functions` | 3.10.4 | Solo para `attachDatabasePool` en `lib/db.ts` (liberar sockets en Vercel Fluid compute). Es un no-op fuera de Vercel; no usar el resto de la API. |
+| `server-only` | 0.0.1 | Marcador de build que impide importar módulos de servidor desde Client Components. Solo se importa (sin usar su API) en `lib/db.ts` y en los servicios de lectura del catálogo. |
 
 Removerlas es posible (borrar `neon.ts` y la llamada a `attachDatabasePool`), pero implica perder gestión del pool en despliegues serverless. No agregar ningún otro paquete `@neon/*` o `@vercel/*` sin aprobación explícita.
 

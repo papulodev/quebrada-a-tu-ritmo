@@ -1,3 +1,5 @@
+import "server-only";
+
 import { attachDatabasePool } from "@vercel/functions";
 import { Pool } from "pg";
 import { databaseUrl } from "@/lib/env";

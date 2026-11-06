@@ -4,8 +4,9 @@
 // values. Rows are cast in SQL (`::float8`, `::text`) so `pg` cannot hand back
 // `numeric` strings or timezone-shifted `Date` objects for values we expose.
 
+import "server-only";
+
 import { getPool } from "@/lib/db";
-import { assertServerRuntime } from "@/lib/server-only";
 import type { Destination, Experience, TransportOption } from "../domain/types";
 import {
   mapDestination,
@@ -45,8 +46,6 @@ const TRANSPORT_COLUMNS = `
 
 /** Active destinations, alphabetical. */
 export async function listDestinations(): Promise<Destination[]> {
-  assertServerRuntime("The catalogue repository");
-
   const { rows } = await getPool().query<DestinationRow>(
     `SELECT ${DESTINATION_COLUMNS} FROM destinations WHERE active ORDER BY name`,
   );
@@ -58,8 +57,6 @@ export async function listDestinations(): Promise<Destination[]> {
 export async function findDestinationBySlug(
   slug: string,
 ): Promise<Destination | null> {
-  assertServerRuntime("The catalogue repository");
-
   const { rows } = await getPool().query<DestinationRow>(
     `SELECT ${DESTINATION_COLUMNS} FROM destinations WHERE slug = $1 AND active`,
     [slug],
@@ -72,8 +69,6 @@ export async function findDestinationBySlug(
 export async function listExperiencesByDestination(
   destinationId: string,
 ): Promise<Experience[]> {
-  assertServerRuntime("The catalogue repository");
-
   const { rows } = await getPool().query<ExperienceRow>(
     `SELECT ${EXPERIENCE_COLUMNS} FROM experiences
      WHERE destination_id = $1
@@ -89,8 +84,6 @@ export async function listTransportOptionsBetween(
   originDestinationId: string,
   destinationDestinationId: string,
 ): Promise<TransportOption[]> {
-  assertServerRuntime("The catalogue repository");
-
   const { rows } = await getPool().query<TransportOptionRow>(
     `SELECT ${TRANSPORT_COLUMNS} FROM transport_options
      WHERE origin_destination_id = $1 AND destination_destination_id = $2

@@ -447,6 +447,13 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Resultado:** informe de viabilidad de una integración concreta.
 - **Criterios de aceptación:** se documentan licencia, frecuencia de actualización, cobertura, límites, costo y plan de fallback antes de escribir integración de producción.
 
+### QTR-038 — Retirar el puente legacy de `db:push` y `db/schema.sql`
+
+- **Prioridad:** P3 · **Esfuerzo:** S
+- **Depende de:** QTR-008
+- **Resultado:** un único camino de migración, sin comandos ni archivos que ya no hacen nada.
+- **Criterios de aceptación:** se eliminan `scripts/db-push.mjs`, el script `db:push` de `package.json` y `db/schema.sql`; no queda ninguna referencia al puente en `README.md`, `PROJECT_SPEC.md` ni `AGENTS.md`; `db:migrate` y `db:seed` siguen documentados y verificados contra PostgreSQL local; lint, typecheck, test y build pasan.
+
 ---
 
 ## Secuencia recomendada
