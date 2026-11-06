@@ -11,8 +11,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/db-migrate.mjs",
-    "db:seed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/db-seed.mjs",
-    "db:push": "node --env-file=.env.local scripts/db-push.mjs"
+    "db:seed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/db-seed.mjs"
   },
   "dependencies": {
     "@neon/config": "^1.9.5",

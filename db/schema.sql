@@ -1,4 +1,0 @@
--- DEPRECATED (QTR-008): db/migrations/ is now the single source of truth for
--- the database shape, applied with `pnpm run db:migrate`. This file is kept as
--- an empty, idempotent no-op so `pnpm run db:push` does not break; remove both
--- in a cleanup ticket once nothing references them.

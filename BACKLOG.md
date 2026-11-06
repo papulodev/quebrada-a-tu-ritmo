@@ -456,6 +456,8 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Resultado:** un único camino de migración, sin comandos ni archivos que ya no hacen nada.
 - **Criterios de aceptación:** se eliminan `scripts/db-push.mjs`, el script `db:push` de `package.json` y `db/schema.sql`; no queda ninguna referencia al puente en `README.md`, `PROJECT_SPEC.md` ni `AGENTS.md`; `db:migrate` y `db:seed` siguen documentados y verificados contra PostgreSQL local; lint, typecheck, test y build pasan.
 
+Verificado el 2026-11-06: se eliminaron `scripts/db-push.mjs`, `db/schema.sql` y el script `db:push` de `package.json`; `pnpm run db:push` responde `ERR_PNPM_NO_SCRIPT`. `grep` no encuentra referencias al puente en `README.md`, `PROJECT_SPEC.md` ni `AGENTS.md` (solo quedan menciones históricas en la nota de QTR-001 y en este ticket). `db:migrate` y `db:seed` se ejecutaron contra PostgreSQL 18.6 en Docker: `0001_catalog.sql` aplicada, segunda ejecución sin migraciones pendientes, seed idempotente con 4 destinos y 6 experiencias. `pnpm run lint`, `pnpm run typecheck`, `pnpm run test` (37/37) y `pnpm run build` pasan.
+
 ---
 
 ## Secuencia recomendada
