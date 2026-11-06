@@ -90,10 +90,12 @@ Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, tr
 - **Depende de:** QTR-005
 - **Resultado:** catálogo pequeño con destinos útiles para probar distintos perfiles.
 - **Criterios de aceptación:**
-  - [ ] Incluye localidades/atractivos pertinentes como Tilcara, Purmamarca, Maimará y Humahuaca.
-  - [ ] Cada registro tiene identificador estable y descripción breve.
-  - [ ] No se inventan horarios o precios.
-  - [ ] Los datos relevantes tienen fuente y estado de verificación o se marcan pendientes.
+  - [X] Incluye localidades/atractivos pertinentes como Tilcara, Purmamarca, Maimará y Humahuaca.
+  - [X] Cada registro tiene identificador estable y descripción breve.
+  - [X] No se inventan horarios o precios.
+  - [X] Los datos relevantes tienen fuente y estado de verificación o se marcan pendientes.
+
+Verificado el 2026-11-05: `features/catalog/domain/destinations.ts` incluye Tilcara, Purmamarca, Maimará y Humahuaca con `id`/`slug` estables y descripción breve. Ningún registro declara horarios, precios, coordenadas ni duración de visita: esos campos quedan en `null` y todos los registros están en `needs_verification` con `source: null`. Pendiente antes de una demo pública: verificar descripciones contra fuentes primarias y completar `source`/`verifiedAt`.
 
 ### QTR-007 — Crear catálogo inicial de experiencias
 
@@ -101,10 +103,12 @@ Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, tr
 - **Depende de:** QTR-005, QTR-006
 - **Resultado:** lista de experiencias con duración e intereses para probar la planificación.
 - **Criterios de aceptación:**
-  - [ ] Cada experiencia referencia un destino existente.
-  - [ ] Intereses/categorías usan valores controlados.
-  - [ ] La duración puede ser desconocida; no se usa cero como valor por defecto.
-  - [ ] Cada dato variable tiene fuente/fecha o estado `needs_verification`.
+  - [X] Cada experiencia referencia un destino existente.
+  - [X] Intereses/categorías usan valores controlados.
+  - [X] La duración puede ser desconocida; no se usa cero como valor por defecto.
+  - [X] Cada dato variable tiene fuente/fecha o estado `needs_verification`.
+
+Verificado el 2026-11-05: `features/catalog/domain/experiences.ts` contiene seis experiencias y un test comprueba que cada `destinationId` existe en el catálogo de destinos. `interests` usa `Interest` y `category` usa `ExperienceCategory` (ambos uniones controladas). `estimatedDurationMinutes` y `budgetLevel` son `null` en todos los registros —nunca `0`— y cada experiencia queda en `needs_verification` sin fuente. Pendiente antes de una demo pública: verificar existencia, horarios y costos reales contra fuentes primarias.
 
 ### QTR-008 — Definir esquema SQL y migración inicial
 
@@ -112,10 +116,12 @@ Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, tr
 - **Depende de:** QTR-005
 - **Resultado:** tablas iniciales del catálogo en PostgreSQL.
 - **Criterios de aceptación:**
-  - [ ] Existe migración SQL versionada para destinos, experiencias y opciones de transporte/fuentes necesarias.
-  - [ ] IDs, relaciones y restricciones están definidos.
-  - [ ] La migración se puede aplicar en una base vacía.
-  - [ ] Se documentan los pasos necesarios para ejecutarla localmente.
+  - [X] Existe migración SQL versionada para destinos, experiencias y opciones de transporte/fuentes necesarias.
+  - [X] IDs, relaciones y restricciones están definidos.
+  - [X] La migración se puede aplicar en una base vacía.
+  - [X] Se documentan los pasos necesarios para ejecutarla localmente.
+
+Verificado el 2026-11-05: `db/migrations/0001_catalog.sql` crea `destinations`, `experiences`, `transport_options` y `source_notes` con PK textual, FK con `ON DELETE RESTRICT`, unicidad de `slug`, índices por FK y CHECK para cada enum. Los valores desconocidos siguen siendo `NULL` y la base rechaza `0` como duración, precios invertidos, coordenadas sueltas, intereses fuera de la lista controlada y filas `verified` sin fuente y fecha. `scripts/db-migrate.mjs` (sin dependencias nuevas, usa `pg`) aplica los archivos pendientes en orden, dentro de una transacción, con advisory lock y checksum en `schema_migrations`; `pnpm run db:migrate` está documentado en README. Probado contra PostgreSQL 18 en Docker sobre una base vacía: primera ejecución aplica `0001`, la segunda informa "No pending migrations", editar una migración aplicada aborta con error de drift y una migración que falla revierte por completo sin dejar registro. No se ejecutó contra la rama de Neon del proyecto.
 
 ### QTR-009 — Conectar PostgreSQL desde código de servidor
 
@@ -123,10 +129,12 @@ Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, tr
 - **Depende de:** QTR-004, QTR-008
 - **Resultado:** módulo de conexión y consultas de catálogo reutilizables.
 - **Criterios de aceptación:**
-  - [ ] Conexión disponible solo en módulos de servidor.
-  - [ ] Consultas parametrizadas; no concatenan entrada del usuario.
-  - [ ] Error de configuración controlado y documentado.
-  - [ ] Ningún secreto llega al bundle del cliente.
+  - [X] Conexión disponible solo en módulos de servidor.
+  - [X] Consultas parametrizadas; no concatenan entrada del usuario.
+  - [X] Error de configuración controlado y documentado.
+  - [X] Ningún secreto llega al bundle del cliente.
+
+Verificado el 2026-11-05: `features/catalog/services/catalog-repository.ts` concentra las lecturas del catálogo y llama a `assertServerRuntime` antes de tocar el pool; `lib/server-only.ts` lanza un error explícito si el módulo se evalúa en el navegador (el paquete `server-only` no se agregó porque AGENTS.md §7 exige aprobación para dependencias nuevas). Todas las consultas usan `$n`; probado contra PostgreSQL 18 en Docker con `findDestinationBySlug("' OR 1=1 --")`, que devuelve `null` en vez de filtrar filas. `lib/env.ts` lanza `MissingEnvironmentVariableError` con un mensaje que nombra la variable y no incluye su valor; cubierto por tests unitarios. `pnpm run build` no incluye `DATABASE_URL`, `postgres://`, `getPool` ni el repositorio en `.next/static` (grep sin coincidencias). Mappers cubiertos por tests: valores desconocidos quedan en `null` y un enum inesperado lanza `InvalidCatalogueRowError`.
 
 ### QTR-010 — Cargar datos de demo mediante seed
 
@@ -134,9 +142,11 @@ Verificado el 2026-11-05: `features/catalog/domain/` (destinos, experiencias, tr
 - **Depende de:** QTR-006, QTR-007, QTR-008
 - **Resultado:** base local con catálogo suficiente para generar un itinerario demostrable.
 - **Criterios de aceptación:**
-  - [ ] `pnpm run db:seed` o comando documentado carga los datos de ejemplo.
-  - [ ] El seed es repetible sin duplicar filas de forma descontrolada.
-  - [ ] Los datos de demo identifican cualquier elemento que no esté verificado.
+  - [X] `pnpm run db:seed` o comando documentado carga los datos de ejemplo.
+  - [X] El seed es repetible sin duplicar filas de forma descontrolada.
+  - [X] Los datos de demo identifican cualquier elemento que no esté verificado.
+
+Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERIENCES` desde `features/catalog/domain/`, escribe dentro de una transacción con `ON CONFLICT (id) DO UPDATE` y falla si un id se repite o una experiencia apunta a un destino inexistente. Contra PostgreSQL 18 en Docker (base vacía + `db:migrate`), dos ejecuciones seguidas reportan `Seeded 4 destination(s) and 6 experience(s).` y las tablas quedan en 4 y 6 filas, sin duplicados; `estimated_visit_minutes`, `latitude`, `longitude`, `source_*`, `estimated_duration_minutes` y `budget_level` quedan en `NULL` y las 10 filas en `needs_verification`, con `interests` como `text[]`. No se ejecutó contra la rama de Neon.
 
 ---
 
