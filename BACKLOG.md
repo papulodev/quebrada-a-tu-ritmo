@@ -160,10 +160,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-005
 - **Resultado:** contrato único para validar el formulario en el servidor.
 - **Criterios de aceptación:**
-  - [ ] Incluye días, origen, movilidad, base/alojamiento, presupuesto, intereses y ritmo.
-  - [ ] Rechaza tipos/valores inválidos y listas de intereses vacías cuando sean obligatorias.
-  - [ ] Se puede probar sin renderizar la UI.
-  - [ ] El error señala el campo que necesita corrección.
+  - [X] Incluye días, origen, movilidad, base/alojamiento, presupuesto, intereses y ritmo.
+  - [X] Rechaza tipos/valores inválidos y listas de intereses vacías cuando sean obligatorias.
+  - [X] Se puede probar sin renderizar la UI.
+  - [X] El error señala el campo que necesita corrección.
+
+Verificado el 2026-11-07: `features/planner/domain/validate-preferences.ts` acepta `input: unknown` y devuelve `PreferencesValidation`, una unión discriminada con `ok`, `value` e `issues`. Valida los siete campos del perfil, rechaza días no enteros o fuera de `[1, 30]`, orígenes y opciones desconocidas, `interests` vacíos o con ítems inválidos, y acumula los problemas en el orden de los campos con un `field` específico (`days`, `origin.destinationId`, `interests.2`, etc.). La validación no importa React ni módulos de servidor; `validate-preferences.test.ts` la cubre con `it.each` sobre entradas no válidas y 12 tests en total. No se agregó una librería de validación: `AGENTS.md` §7 exige aprobación explícita para dependencias nuevas.
 
 ### QTR-012 — Implementar reglas para seleccionar estrategias
 
@@ -171,10 +173,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-011
 - **Resultado:** función pura que devuelve estrategias candidatas según perfil.
 - **Criterios de aceptación:**
-  - [ ] Diferencia al menos escenario de excursión desde Salta, base en la Quebrada y recorrido con movilidad propia/combinada cuando corresponda.
-  - [ ] No devuelve siempre el mismo orden para todos los perfiles.
-  - [ ] Las condiciones desconocidas quedan reflejadas en advertencias.
-  - [ ] Incluye unit tests para al menos tres perfiles.
+  - [X] Diferencia al menos escenario de excursión desde Salta, base en la Quebrada y recorrido con movilidad propia/combinada cuando corresponda.
+  - [X] No devuelve siempre el mismo orden para todos los perfiles.
+  - [X] Las condiciones desconocidas quedan reflejadas en advertencias.
+  - [X] Incluye unit tests para al menos tres perfiles.
+
+Verificado el 2026-11-07: `features/planner/domain/select-strategies.ts` exporta `selectStrategies(preferences: TravelPreferences): TravelStrategy[]`, una función pura sin React, base de datos ni red. Devuelve cuatro candidatas —`excursiones-desde-salta`, `base-en-la-quebrada`, `recorrido-con-movilidad-propia-o-combinada` y `tren-solar`— puntuadas según origen, movilidad, días, ritmo y decisión de alojamiento; el orden se resuelve con `right.score - left.score || left.index - right.index`, así que es estable entre ejecuciones. Las condiciones que el catálogo no puede resolver no descartan estrategias: se agregan advertencias compartidas (origen fuera del catálogo, movilidad combinada sin tramos) y específicas por escenario (operador de excursiones, micros y combis, rutas y estacionamientos, horarios del Tren Solar, "El Tren Solar no cubre todos los destinos ni los traslados finales", localidad de base no especificada, días insuficientes, estrategia que no coincide con la movilidad elegida). Todas las candidatas usan `confidence: "needs_verification"` porque el catálogo aún no tiene horarios ni disponibilidad verificados. `select-strategies.test.ts` cubre cuatro perfiles (excursión desde Salta, base decidida, recorrido en auto y Tren Solar), comprueba que el primer id cambia entre perfiles, verifica las advertencias por condición desconocida y compara el resultado completo en dos llamadas para asegurar determinismo: 12 tests, 82 en total en 9 archivos, con `pnpm typecheck` y `pnpm lint` en verde. "Tilcara como base" no se implementó como estrategia separada: la cubre la estrategia de base genérica más la advertencia por localidad no especificada.
 
 ### QTR-013 — Definir modelo visual de tarjeta de estrategia
 
