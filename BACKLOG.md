@@ -198,10 +198,12 @@ Verificado el 2026-11-07: `features/planner/components/StrategyCard.tsx` expone 
 - **Depende de:** QTR-009, QTR-011, QTR-012
 - **Resultado:** endpoint de servidor que recibe preferencias validadas y retorna estrategias tipadas.
 - **Criterios de aceptación:**
-  - [ ] Valida cada input en servidor.
-  - [ ] Devuelve estructura de error consistente para entrada inválida.
-  - [ ] No revela errores SQL ni secretos.
-  - [ ] Tiene al menos un test de respuesta válida y otro de inválida.
+  - [X] Valida cada input en servidor.
+  - [X] Devuelve estructura de error consistente para entrada inválida.
+  - [X] No revela errores SQL ni secretos.
+  - [X] Tiene al menos un test de respuesta válida y otro de inválida.
+
+Verificado el 2026-11-08: `app/api/compare/route.ts` exporta `POST(request: Request)` y responde `{ strategies: TravelStrategy[] }` con las cuatro candidatas de `selectStrategies`, sin acceso a base de datos: la comparación es una función pura del request, así que no hay consultas SQL que filtrar. Todo cuerpo se lee con `readJsonBody`, que envuelve `request.json()` y convierte un JSON malformado en `ApiError(400, "invalid_input", "El cuerpo de la solicitud debe ser JSON válido.")`; después `validatePreferences` recibe `unknown` y, si falla, se lanza `ApiError(400, "invalid_input", "Los datos de preferencias no son válidos.")`. Ambas respuestas y cualquier excepción inesperada pasan por `jsonError`, así que el cliente recibe siempre `{ error: { code, message } }` y un error interno se reduce a 500 `internal_error` con un mensaje genérico, sin stack, cadenas de conexión ni secretos. `app/api/compare/route.test.ts` cubre cuatro casos: 200 con estrategias válidas (compara el conjunto de ids contra `STRATEGY_IDS`), 400 por preferencias inválidas, 400 por JSON malformado y 500 sanitizado con un `Error` simulado que contiene `ECONNREFUSED` y una contraseña falsa. Los tests llaman al handler con `Request` nativo y no requieren servidor; `pnpm test` pasa con 86 tests en 10 archivos, y `pnpm typecheck`, `pnpm lint` y `pnpm build` están en verde (la ruta aparece como `ƒ /api/compare`). El envelope no incluye los `issues` por campo: el formulario de QTR-015 usa el mismo validador del lado del cliente para señalar el campo a corregir.
 
 ### QTR-015 — Construir el formulario del planificador
 
