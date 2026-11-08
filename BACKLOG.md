@@ -211,10 +211,12 @@ Verificado el 2026-11-08: `app/api/compare/route.ts` exporta `POST(request: Requ
 - **Depende de:** QTR-011
 - **Resultado:** formulario usable para cargar preferencias.
 - **Criterios de aceptación:**
-  - [ ] Contiene los campos del contrato del dominio.
-  - [ ] Tiene etiquetas, errores, estados y valores por defecto razonables.
-  - [ ] La validación no borra respuestas válidas.
-  - [ ] El flujo se puede completar solo con teclado.
+  - [X] Contiene los campos del contrato del dominio.
+  - [X] Tiene etiquetas, errores, estados y valores por defecto razonables.
+  - [X] La validación no borra respuestas válidas.
+  - [X] El flujo se puede completar solo con teclado.
+
+Verificado el 2026-11-08: `features/planner/components/PlannerForm.tsx` y `app/planner/page.tsx` cubren los siete campos de `TravelPreferences` sin duplicar el contrato: días con `TRIP_DAY_LIMITS`, origen (`ORIGIN_KINDS`, con select de localidad solo cuando el origen es `quebrada_locality`), movilidad (cinco modos), alojamiento con la unión `LodgingBase` (casilla "base decidida" más destino, con la opción "Todavía sin definir" que produce `destinationId: null` en lugar de un valor inventado), presupuesto, intereses (los once de `INTERESTS` como checkboxes en grid `sm:grid-cols-2`) y ritmo. Los valores por defecto son explícitos y conservadores: 3 días, origen Salta, sin auto, sin base decidida, presupuesto medio, ritmo equilibrado e intereses vacíos; el campo de días vacío se mantiene como texto vacío y no se convierte en `0`. Cada control tiene etiqueta asociada (o `fieldset`/`legend` con `role="radiogroup"`), ayuda enlazada por `aria-describedby` y errores por campo renderizados junto al control con `aria-invalid` y `role="alert"`; al enviar con problemas, el foco salta al primer campo inválido usando `data-field`. La validación reutiliza `validatePreferences` —el mismo validador del endpoint— y solo escribe el objeto de errores: el resto del estado del formulario no se toca, así que una respuesta previa nunca se borra ni se reemplaza por un valor por defecto. Con un envío válido se muestra el panel "Preferencias validadas" con los valores normalizados; ese panel es informativo y no confirma disponibilidad ni reservas, y el formulario todavía no llama a `/api/compare` (QTR-016). En navegador, un script Playwright pasó 30 comprobaciones de teclado y accesibilidad: un único tab stop por grupo de radios, `Space` selecciona, `Enter` en un campo de texto envía, el error mueve el foco al control correspondiente y el flujo completo se puede terminar solo con teclado sin errores de consola. `pnpm typecheck`, `pnpm lint`, `pnpm test` (86 tests en 10 archivos) y `pnpm build` pasan, y `detect.mjs` no reporta hallazgos.
 
 ### QTR-016 — Conectar formulario con comparación de estrategias
 
