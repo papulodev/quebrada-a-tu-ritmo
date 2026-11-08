@@ -224,10 +224,12 @@ Verificado el 2026-11-08: `features/planner/components/PlannerForm.tsx` y `app/p
 - **Depende de:** QTR-013, QTR-014, QTR-015
 - **Resultado:** al enviar el formulario, se muestran opciones pertinentes.
 - **Criterios de aceptación:**
-  - [ ] Hay loading, error y estado sin resultados.
-  - [ ] El usuario puede volver atrás sin reingresar todo.
-  - [ ] Cada estrategia comunica sus dependencias no confirmadas.
-  - [ ] La comparación funciona en viewport móvil.
+  - [X] Hay loading, error y estado sin resultados.
+  - [X] El usuario puede volver atrás sin reingresar todo.
+  - [X] Cada estrategia comunica sus dependencias no confirmadas.
+  - [X] La comparación funciona en viewport móvil.
+
+Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (121 líneas) cubre los cuatro estados con un tipo exportado `ComparisonState` (`idle`, `loading`, `error`, `ready`) más el caso de arreglo vacío. El envío del formulario llama a `POST /api/compare` desde `handleSubmit`, después de validar del lado del cliente con el mismo `validatePreferences`; mientras corre, el formulario muestra "Comparando estrategias…" en un `role="status"` y deshabilita el botón sin cambiar su etiqueta, y al terminar lo rehabilita. Un fallo de red produce "No se pudo conectar con el comparador. Revise su conexión.", una respuesta no exitosa usa el mensaje del envelope `{ error: { code, message } }` con un texto de reserva, `internal_error` se traduce a un mensaje genérico y un payload que no respeta el contrato de `TravelStrategy` se rechaza con "La respuesta del comparador no tiene el formato esperado."; el error se anuncia con `role="alert"` y ofrece "Reintentar", que repite la última petición sin tocar el formulario. `{ strategies: [] }` muestra "Sin resultados" con el motivo ("No hay estrategias disponibles para estas preferencias."). El criterio de volver atrás se cumple por construcción: el formulario sigue montado mientras se muestran los resultados, así que "Volver a las preferencias" solo desplaza y enfoca `[data-field="days"]` y conserva todos los valores ya cargados. Cada `StrategyCard` muestra su insignia de confianza y la nota "Datos por confirmar" junto al grupo, y el contenedor usa `grid gap-4 xl:grid-cols-2`, que apila las tarjetas en una columna en móvil. La verificación funcional se hizo con un script Playwright sobre el build de producción servido en `127.0.0.1:3100`: 22 comprobaciones en verde, entre ellas que el POST enviado incluye los días e intereses elegidos, que el estado de carga dura lo esperado con el botón deshabilitado, que los estados de error, sin resultados, red caída y payload inválido muestran el mensaje correcto, que "Reintentar" recupera las estrategias y que a 390 px el ancho de desborde es `0px` sin errores de página. `pnpm typecheck`, `pnpm lint`, `pnpm test` (86 tests en 10 archivos) y `pnpm build` están en verde, y el chequeo de diseño de `impeccable` no reporta hallazgos.
 
 ---
 
