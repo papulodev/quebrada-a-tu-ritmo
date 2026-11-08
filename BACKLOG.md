@@ -186,9 +186,11 @@ Verificado el 2026-11-07: `features/planner/domain/select-strategies.ts` exporta
 - **Depende de:** QTR-012
 - **Resultado:** tarjeta reutilizable para comparar opciones.
 - **Criterios de aceptación:**
-  - [ ] Muestra nombre, para quién encaja, ventajas, limitaciones y datos por confirmar.
-  - [ ] Tiene foco visible y estructura accesible.
-  - [ ] Se adapta a móvil y escritorio.
+  - [X] Muestra nombre, para quién encaja, ventajas, limitaciones y datos por confirmar.
+  - [X] Tiene foco visible y estructura accesible.
+  - [X] Se adapta a móvil y escritorio.
+
+Verificado el 2026-11-07: `features/planner/components/StrategyCard.tsx` expone `StrategyCard({ strategy, name, defaultChecked })` y renderiza nombre, resumen, "Para quién encaja" (`fits`), "Ventajas" (`advantages`), "Limitaciones" (`limitations`), "Datos por confirmar" (`warnings`, con un mensaje explícito cuando no hay advertencias) y "Transporte previsto" (etiquetas legibles de `logistics`); el badge de `confidence` usa un `switch` exhaustivo para no mostrar un estado desconocido como confirmado. La tarjeta es una opción de un grupo de radios: el `<input type="radio">` queda `sr-only` pero focusable, se nombra con `aria-labelledby` (título) y se describe con `aria-describedby` (resumen), y el área clickeable es un `<label>` overlay con `htmlFor` al input —no un wrapper, porque un `<label>` solo admite phrasing content y envolver las secciones produciría HTML inválido—. El foco visible y la selección se resuelven con variantes `has-[:focus-visible]` (ring sobre la tarjeta) y `has-[:checked]` (borde y fondo), más un badge "Elegida" visible para no depender solo del color. El layout es mobile-first y pasa a dos columnas de ventajas/limitaciones con `sm:grid-cols-2`, con padding `sm:p-5`. `pnpm typecheck`, `pnpm lint` y `pnpm build` pasan, y `detect.mjs` no reporta hallazgos. La tarjeta todavía no se renderiza en ninguna página: se conecta al formulario y a la comparación en QTR-016, que es donde se puede comprobar en navegador.
 
 ### QTR-014 — Exponer endpoint para comparar estrategias
 
