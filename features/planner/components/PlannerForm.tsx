@@ -7,15 +7,21 @@
 // source of truth (FR-07). Every answer stays in local state, so a failed
 // validation never discards what the traveller already entered.
 //
-// The client component does not submit to a Server Action: the comparison
-// request is the next ticket, so today a valid submit only shows the
-// normalised result.
+// The client component does not submit to a Server Action: a valid submit
+// posts the preferences to `/api/compare` and renders the returned strategies
+// below the form. Every answer stays in place, so the traveller can adjust and
+// compare again without re-entering anything (QTR-016).
 
 import { useId, useRef, useState, type FormEvent } from "react";
 
+import { isConfidenceStatus } from "../../catalog/domain/confidence";
 import { DESTINATIONS } from "../../catalog/domain/destinations";
 import type { BudgetLevel, Interest } from "../../catalog/domain/types";
-import { BUDGET_LEVELS, INTERESTS } from "../../catalog/domain/types";
+import {
+  BUDGET_LEVELS,
+  INTERESTS,
+  TRANSPORT_MODES,
+} from "../../catalog/domain/types";
 import type {
   LodgingBase,
   Mobility,
@@ -23,6 +29,7 @@ import type {
   OriginKind,
   Pace,
   TravelPreferences,
+  TravelStrategy,
 } from "../domain/types";
 import { MOBILITIES, ORIGIN_KINDS, PACES } from "../domain/types";
 import {
@@ -30,6 +37,10 @@ import {
   validatePreferences,
   type PreferenceIssue,
 } from "../domain/validate-preferences";
+import {
+  StrategyComparison,
+  type ComparisonState,
+} from "./StrategyComparison";
 
 const ORIGIN_LABELS: Record<OriginKind, string> = {
   salta: "Salta",
@@ -249,6 +260,78 @@ function SummaryItem({ label, value }: SummaryItemProps) {
   );
 }
 
+// The response is untrusted until it passes these guards. Each check narrows
+// the parsed JSON to the domain contract without casting.
+const TRANSPORT_MODE_LOOKUP = new Set<string>(TRANSPORT_MODES);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item: unknown) => typeof item === "string")
+  );
+}
+
+function isTravelStrategy(value: unknown): value is TravelStrategy {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.summary === "string" &&
+    isStringArray(value.fits) &&
+    isStringArray(value.advantages) &&
+    isStringArray(value.limitations) &&
+    isStringArray(value.warnings) &&
+    isConfidenceStatus(value.confidence) &&
+    Array.isArray(value.logistics) &&
+    value.logistics.every(
+      (mode: unknown) =>
+        typeof mode === "string" && TRANSPORT_MODE_LOOKUP.has(mode),
+    )
+  );
+}
+
+function extractStrategies(payload: unknown): TravelStrategy[] | null {
+  if (!isRecord(payload) || !Array.isArray(payload.strategies)) {
+    return null;
+  }
+  const strategies: TravelStrategy[] = [];
+  for (const candidate of payload.strategies) {
+    if (!isTravelStrategy(candidate)) {
+      return null;
+    }
+    strategies.push(candidate);
+  }
+  return strategies;
+}
+
+function readErrorMessage(payload: unknown): string | null {
+  if (!isRecord(payload) || !isRecord(payload.error)) {
+    return null;
+  }
+  const message = payload.error.message;
+  if (typeof message !== "string" || message.trim() === "") {
+    return null;
+  }
+  if (payload.error.code === "internal_error") {
+    return "Ocurrió un error inesperado. Intente de nuevo más tarde.";
+  }
+  return message;
+}
+
+async function readJsonPayload(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export function PlannerForm() {
   const formId = useId();
   const fieldId = (name: string) => `${formId}-${name}`;
@@ -265,6 +348,9 @@ export function PlannerForm() {
   const [pace, setPace] = useState<Pace>("balanced");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validated, setValidated] = useState<TravelPreferences | null>(null);
+  const [comparison, setComparison] = useState<ComparisonState>({
+    status: "idle",
+  });
 
   const daysError = errors.days;
   const originError = errors.origin;
@@ -300,6 +386,50 @@ export function PlannerForm() {
     }
   }
 
+  async function compare(preferences: TravelPreferences) {
+    setComparison({ status: "loading" });
+
+    let response: Response;
+    try {
+      response = await fetch("/api/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(preferences),
+      });
+    } catch {
+      setComparison({
+        status: "error",
+        message: "No se pudo conectar con el comparador. Revise su conexión.",
+        preferences,
+      });
+      return;
+    }
+
+    const payload = await readJsonPayload(response);
+    if (!response.ok) {
+      setComparison({
+        status: "error",
+        message:
+          readErrorMessage(payload) ??
+          "No se pudo comparar las estrategias. Intente de nuevo.",
+        preferences,
+      });
+      return;
+    }
+
+    const strategies = extractStrategies(payload);
+    if (strategies === null) {
+      setComparison({
+        status: "error",
+        message: "La respuesta del comparador no tiene el formato esperado.",
+        preferences,
+      });
+      return;
+    }
+
+    setComparison({ status: "ready", strategies });
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -329,13 +459,34 @@ export function PlannerForm() {
     if (!result.ok) {
       const grouped = groupIssues(result.issues);
       setErrors(grouped);
-      setValidated(null);
       focusFirstIssue(grouped);
       return;
     }
 
     setErrors({});
     setValidated(result.value);
+    void compare(result.value);
+  }
+
+  function handleBack() {
+    const daysControl = formRef.current?.querySelector<HTMLElement>(
+      '[data-field="days"]',
+    );
+
+    if (!daysControl) {
+      return;
+    }
+
+    daysControl.focus({ preventScroll: true });
+    daysControl.scrollIntoView({ block: "center" });
+  }
+
+  function handleRetry() {
+    if (comparison.status !== "error") {
+      return;
+    }
+
+    void compare(comparison.preferences);
   }
 
   const daysHintId = fieldId("days-hint");
@@ -575,9 +726,19 @@ export function PlannerForm() {
         error={errors.pace}
       />
 
-      <button type="submit" className="btn btn-primary self-start">
-        Revisar preferencias
+      <button
+        type="submit"
+        className="btn btn-primary self-start"
+        disabled={comparison.status === "loading"}
+      >
+        Comparar estrategias
       </button>
+
+      <StrategyComparison
+        state={comparison}
+        onBack={handleBack}
+        onRetry={handleRetry}
+      />
 
       {validated ? (
         <section
@@ -612,8 +773,8 @@ export function PlannerForm() {
             />
           </dl>
           <p className="text-sm text-base-content/70">
-            Las respuestas quedan cargadas en el formulario. La comparación de
-            estrategias se habilita en el siguiente paso.
+            Las respuestas quedan cargadas en el formulario; puede ajustarlas y
+            volver a comparar.
           </p>
         </section>
       ) : null}
