@@ -241,10 +241,12 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-005, QTR-007, QTR-011
 - **Resultado:** función pura que ordena experiencias por restricciones e intereses.
 - **Criterios de aceptación:**
-  - [ ] Excluye lo incompatible con el perfil cuando se pueda determinar.
-  - [ ] Puntúa intereses y evita resultados idénticos para perfiles diferentes.
-  - [ ] No descarta silenciosamente experiencias por datos desconocidos.
-  - [ ] Incluye tests de límites y datos incompletos.
+  - [X] Excluye lo incompatible con el perfil cuando se pueda determinar.
+  - [X] Puntúa intereses y evita resultados idénticos para perfiles diferentes.
+  - [X] No descarta silenciosamente experiencias por datos desconocidos.
+  - [X] Incluye tests de límites y datos incompletos.
+
+Verificado el 2026-11-09: `features/itinerary/domain/rank-experiences.ts` implementa `rankExperiences(preferences, experiences, destinations)` como función pura (NFR-04: sin React, base de datos ni red) que devuelve `ExperienceRanking` con `included` (`ScoredExperience` con `experience`, `score` y `matchedInterests`) y `excluded` (`ExcludedExperience` con `reason`). La puntuación usa pesos explícitos: +3 por cada interés compartido, +2 si la experiencia está en el destino elegido como base de alojamiento (solo cuando `lodging.decided` y `destinationId` no es `null`), y −2 cuando el presupuesto del viajero y el de la experiencia son ambos conocidos y el de la experiencia es superior; una penalización, nunca una exclusión. Las únicas exclusiones son determinables y con razón explícita en español: destino ausente en el catálogo y destino inactivo; todo lo demás (duración, costo, fuente desconocidos, sin coincidencia de intereses, base en otro destino, presupuesto superior) se mantiene en el ranking, y `null` jamás cuenta como cero ni provoca descarte silencioso. El orden es determinista: puntaje descendente y, en empates, orden de declaración. Dos perfiles con intereses distintos producen ordenaciones distintas (FR-15). Los tests en `features/itinerary/domain/rank-experiences.test.ts` (11 casos) cubren puntuación y matchedInterests, diferenciación por perfil, boost de base, base sin destino, penalización de presupuesto sin exclusión, ambas exclusiones con su razón, lista vacía, orden de declaración en empates, datos logísticos desconocidos, y un smoke test contra el catálogo real (`EXPERIENCES`/`DESTINATIONS`) que detecta drift. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (97 tests en 11 archivos).
 
 ### QTR-018 — Distribuir actividades por días y ritmo
 
