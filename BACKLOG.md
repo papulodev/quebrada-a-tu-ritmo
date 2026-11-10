@@ -268,10 +268,12 @@ Verificado el 2026-11-09: `features/itinerary/domain/distribute-experiences.ts` 
 - **Depende de:** QTR-008, QTR-017, QTR-018
 - **Resultado:** el motor incorpora traslados conocidos y marca combinaciones inciertas.
 - **Criterios de aceptación:**
-  - [ ] Cuando hay duración verificada/estimada de traslado, se suma al plan.
-  - [ ] Cuando no existe, el resultado muestra `needs_verification` y no declara confirmada la combinación.
-  - [ ] Se prueban escenarios sin auto y con auto.
-  - [ ] No se inventan frecuencias ni salidas de transporte.
+  - [X] Cuando hay duración verificada/estimada de traslado, se suma al plan.
+  - [X] Cuando no existe, el resultado muestra `needs_verification` y no declara confirmada la combinación.
+  - [X] Se prueban escenarios sin auto y con auto.
+  - [X] No se inventan frecuencias ni salidas de transporte.
+
+Verificado el 2026-11-09: `features/itinerary/domain/distribute-experiences.ts` extiende `distributeExperiences(preferences, ranking, destinations, transportOptions)` para traslados intra-día: entre dos visitas consecutivas del mismo día en destinos distintos inserta un bloque `transfer` (`transfer-${n}` con contador global, `destinationId` del destino de llegada) elegido entre las opciones compatibles con la movilidad del viajero (`MOBILITY_MODES`: `without_car` excluye auto, `own_car` solo auto, `guided_excursions`, `solar_train` y `mixed` restringen a su modo); si ninguna opción es compatible el traslado queda desconocido, sin fallback silencioso a un modo incompatible. La selección es determinista (prioriza duración conocida y, en empates, orden de declaración), el título usa etiquetas en español del modo (`Traslado en colectivo/auto/tren solar/excursión guiada de X a Y`) y las notas de horario pasan del catálogo sin inventar frecuencias ni salidas (FR-13). La duración de traslado conocida se suma al presupuesto de minutos del día junto con la de las visitas (FR-10), mientras que los traslados nunca consumen el cupo de actividades del ritmo; una duración de traslado desconocida jamás se trata como cero (FR-14): el bloque sale con `estimatedDurationMinutes: null` y `confidence: "needs_verification"`, y se emite una advertencia en español por cada par origen→destino único sin duración confirmada (esa combinación "no se puede declarar confirmada"), desduplicada entre días y ubicada después de los dos avisos genéricos de QTR-018. El lookup de opciones es direccional (clave origen→destino, sin simetría asumida). Los tests en `features/itinerary/domain/distribute-experiences.test.ts` (23 casos) cubren inserción y forma del bloque de traslado, suma de la duración al presupuesto (rechaza por presupuesto con traslado de 100 minutos y acepta con 50), ausencia de datos con advertencia exacta, opción sin duración no confirmada, los cinco modos de movilidad, escenarios sin auto y con auto sin coincidencia de modo, direccionalidad, saltar traslados dentro del mismo destino, preferencia determinista por duración conocida, traslados fuera del cupo de actividades, advertencia única por par entre días, determinismo, y un smoke test contra el catálogo real pasando `[]` como opciones de transporte (QTR-037: el MVP no carga datos de transporte) que detecta drift. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (120 tests en 12 archivos).
 
 ### QTR-020 — Explicar las decisiones del motor
 

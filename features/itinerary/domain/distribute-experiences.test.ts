@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { DESTINATIONS } from "../../catalog/domain/destinations";
 import { EXPERIENCES } from "../../catalog/domain/experiences";
-import type { Destination, Experience } from "../../catalog/domain/types";
 import type {
-  ItineraryDay,
-  TravelPreferences,
+  Destination,
+  Experience,
+  TransportOption,
+} from "../../catalog/domain/types";
+import {
+  MOBILITIES,
+  type ItineraryDay,
+  type Mobility,
+  type TravelPreferences,
 } from "../../planner/domain/types";
 import {
   rankExperiences,
@@ -65,6 +71,25 @@ function experience(overrides: Partial<Experience> = {}): Experience {
   };
 }
 
+function transportOption(
+  overrides: Partial<TransportOption> = {},
+): TransportOption {
+  return {
+    id: "opt-bus-home-attraction",
+    originDestinationId: "dest-home",
+    destinationDestinationId: "dest-attraction",
+    mode: "bus",
+    estimatedDurationMinutes: 90,
+    priceMin: null,
+    priceMax: null,
+    currency: "ARS",
+    scheduleNotes: null,
+    source: null,
+    confidence: "estimated",
+    ...overrides,
+  };
+}
+
 const home = destination();
 const attraction = destination({
   id: "dest-attraction",
@@ -96,6 +121,27 @@ function rankingOf(items: Experience[]): ExperienceRanking {
     })),
     excluded: [],
   };
+}
+
+function homeThenAttraction(
+  homeOverrides: Partial<Experience> = {},
+  attractionOverrides: Partial<Experience> = {},
+): Experience[] {
+  return [
+    experience({
+      id: "exp-home-1",
+      name: "Experiencia local 1",
+      estimatedDurationMinutes: 60,
+      ...homeOverrides,
+    }),
+    experience({
+      id: "exp-attraction-1",
+      name: "Experiencia de atracción 1",
+      destinationId: attraction.id,
+      estimatedDurationMinutes: 60,
+      ...attractionOverrides,
+    }),
+  ];
 }
 
 function idsByDay(distribution: ExperienceDistribution): string[][] {
@@ -140,6 +186,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 3 }),
       rankingOf(experiences(7)),
       catalogue,
+      [],
     );
 
     expect(distribution.days.map((day) => day.dayNumber)).toEqual([1, 2, 3]);
@@ -156,6 +203,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 1 }),
       rankingOf(experiences(5)),
       catalogue,
+      [],
     );
 
     expect(idsByDay(distribution)).toEqual([["exp-1", "exp-2", "exp-3"]]);
@@ -173,6 +221,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 5, pace: "relaxed" }),
       rankingOf(experiences(9)),
       catalogue,
+      [],
     );
 
     const lengths = distribution.days.map((day) => day.blocks.length);
@@ -186,16 +235,19 @@ describe("distributeExperiences", () => {
       preferences({ days: 1, pace: "relaxed" }),
       rankingOf(tenExperiences),
       catalogue,
+      [],
     );
     const balanced = distributeExperiences(
       preferences({ days: 1, pace: "balanced" }),
       rankingOf(tenExperiences),
       catalogue,
+      [],
     );
     const intensive = distributeExperiences(
       preferences({ days: 1, pace: "intensive" }),
       rankingOf(tenExperiences),
       catalogue,
+      [],
     );
 
     expect(dayOf(relaxed, 1).blocks).toHaveLength(2);
@@ -211,6 +263,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 1, pace: "intensive" }),
       rankingOf(experiences(4, { estimatedDurationMinutes: 200 })),
       catalogue,
+      [],
     );
 
     expect(idsByDay(distribution)).toEqual([["exp-1", "exp-2"]]);
@@ -240,6 +293,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 1 }),
       rankingOf([timed, ...untimed]),
       catalogue,
+      [],
     );
 
     expect(idsByDay(distribution)).toEqual([
@@ -266,6 +320,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 1, pace: "intensive" }),
       rankingOf([long]),
       catalogue,
+      [],
     );
 
     expect(idsByDay(distribution)).toEqual([[]]);
@@ -282,6 +337,7 @@ describe("distributeExperiences", () => {
       preferences({ days: 2 }),
       rankingOf([]),
       catalogue,
+      [],
     );
 
     expect(idsByDay(distribution)).toEqual([[], []]);
@@ -311,10 +367,333 @@ describe("distributeExperiences", () => {
         }),
       ]),
       catalogue,
+      [],
     );
 
     expect(dayOf(distribution, 1).destinationCategory).toBe("locality");
     expect(dayOf(distribution, 2).destinationCategory).toBe("attraction");
+  });
+
+  it("inserts a transfer block between visits at different destinations", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [transportOption({ scheduleNotes: "Salidas matutinas según temporada." })],
+    );
+
+    expect(idsByDay(distribution)).toEqual([
+      ["exp-home-1", "transfer-1", "exp-attraction-1"],
+    ]);
+    expect(dayOf(distribution, 1).blocks[1]).toEqual({
+      id: "transfer-1",
+      kind: "transfer",
+      title: "Traslado en colectivo de Localidad base a Atracción de prueba",
+      destinationId: "dest-attraction",
+      estimatedDurationMinutes: 90,
+      notes: "Salidas matutinas según temporada.",
+      confidence: "estimated",
+    });
+    expect(distribution.warnings).toEqual([]);
+  });
+
+  it("charges known transfer durations against the daily budget", () => {
+    const ranking = rankingOf(
+      homeThenAttraction(
+        { estimatedDurationMinutes: 150 },
+        { estimatedDurationMinutes: 150 },
+      ),
+    );
+
+    const rejected = distributeExperiences(
+      preferences({ days: 1 }),
+      ranking,
+      catalogue,
+      [transportOption({ estimatedDurationMinutes: 100 })],
+    );
+
+    expect(idsByDay(rejected)).toEqual([["exp-home-1"]]);
+    expect(unscheduledReasonOf(rejected, "exp-attraction-1")).toContain(
+      "No queda lugar",
+    );
+
+    const accepted = distributeExperiences(
+      preferences({ days: 1 }),
+      ranking,
+      catalogue,
+      [transportOption({ estimatedDurationMinutes: 50 })],
+    );
+
+    expect(idsByDay(accepted)).toEqual([
+      ["exp-home-1", "transfer-1", "exp-attraction-1"],
+    ]);
+  });
+
+  it("flags transfers without catalog data instead of assuming zero minutes", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [],
+    );
+
+    expect(idsByDay(distribution)).toEqual([
+      ["exp-home-1", "transfer-1", "exp-attraction-1"],
+    ]);
+    expect(dayOf(distribution, 1).blocks[1]).toEqual({
+      id: "transfer-1",
+      kind: "transfer",
+      title: "Traslado de Localidad base a Atracción de prueba",
+      destinationId: "dest-attraction",
+      estimatedDurationMinutes: null,
+      notes: null,
+      confidence: "needs_verification",
+    });
+    expect(distribution.warnings).toEqual([
+      "El traslado de Localidad base a Atracción de prueba no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
+    ]);
+  });
+
+  it("does not treat a transfer option without duration as confirmed", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [
+        transportOption({
+          estimatedDurationMinutes: null,
+          scheduleNotes: "Frecuencia sin confirmar.",
+          confidence: "needs_verification",
+        }),
+      ],
+    );
+
+    expect(dayOf(distribution, 1).blocks[1]).toMatchObject({
+      title: "Traslado en colectivo de Localidad base a Atracción de prueba",
+      estimatedDurationMinutes: null,
+      notes: "Frecuencia sin confirmar.",
+      confidence: "needs_verification",
+    });
+    expect(distribution.warnings).toEqual([
+      "El traslado de Localidad base a Atracción de prueba no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
+    ]);
+  });
+
+  it("selects only transport modes compatible with the traveller's mobility", () => {
+    const options = [
+      transportOption({ id: "opt-bus", mode: "bus", estimatedDurationMinutes: 90 }),
+      transportOption({ id: "opt-car", mode: "car", estimatedDurationMinutes: 30 }),
+      transportOption({
+        id: "opt-guided",
+        mode: "guided_excursion",
+        estimatedDurationMinutes: 120,
+      }),
+      transportOption({
+        id: "opt-train",
+        mode: "solar_train",
+        estimatedDurationMinutes: 150,
+      }),
+    ];
+
+    const expectedTitles: Record<Mobility, string> = {
+      without_car: "Traslado en colectivo de Localidad base a Atracción de prueba",
+      own_car: "Traslado en auto de Localidad base a Atracción de prueba",
+      guided_excursions:
+        "Traslado en excursión guiada de Localidad base a Atracción de prueba",
+      solar_train: "Traslado en tren solar de Localidad base a Atracción de prueba",
+      mixed: "Traslado en colectivo de Localidad base a Atracción de prueba",
+    };
+
+    for (const mobility of MOBILITIES) {
+      const distribution = distributeExperiences(
+        preferences({ days: 1, mobility }),
+        rankingOf(homeThenAttraction()),
+        catalogue,
+        options,
+      );
+
+      expect(dayOf(distribution, 1).blocks[1].title).toBe(
+        expectedTitles[mobility],
+      );
+    }
+  });
+
+  it("treats transfers as unknown when no mode matches the mobility", () => {
+    const carOnly = [transportOption({ mode: "car", estimatedDurationMinutes: 30 })];
+
+    const withoutCar = distributeExperiences(
+      preferences({ days: 1, mobility: "without_car" }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      carOnly,
+    );
+    expect(dayOf(withoutCar, 1).blocks[1].estimatedDurationMinutes).toBeNull();
+    expect(dayOf(withoutCar, 1).blocks[1].confidence).toBe(
+      "needs_verification",
+    );
+    expect(withoutCar.warnings).toHaveLength(1);
+
+    const ownCarWithBus = distributeExperiences(
+      preferences({ days: 1, mobility: "own_car" }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [transportOption()],
+    );
+    expect(dayOf(ownCarWithBus, 1).blocks[1].estimatedDurationMinutes).toBeNull();
+    expect(dayOf(ownCarWithBus, 1).blocks[1].confidence).toBe(
+      "needs_verification",
+    );
+    expect(ownCarWithBus.warnings).toHaveLength(1);
+
+    const mixedWithCar = distributeExperiences(
+      preferences({ days: 1, mobility: "mixed" }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      carOnly,
+    );
+    expect(dayOf(mixedWithCar, 1).blocks[1].estimatedDurationMinutes).toBe(30);
+    expect(dayOf(mixedWithCar, 1).blocks[1].confidence).toBe("estimated");
+    expect(mixedWithCar.warnings).toEqual([]);
+  });
+
+  it("keeps transfers directional instead of assuming symmetry", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf([
+        experience({
+          id: "exp-attraction-1",
+          name: "Experiencia de atracción 1",
+          destinationId: attraction.id,
+          estimatedDurationMinutes: 60,
+        }),
+        experience({
+          id: "exp-home-1",
+          name: "Experiencia local 1",
+          estimatedDurationMinutes: 60,
+        }),
+      ]),
+      catalogue,
+      [transportOption()],
+    );
+
+    expect(idsByDay(distribution)).toEqual([
+      ["exp-attraction-1", "transfer-1", "exp-home-1"],
+    ]);
+    expect(dayOf(distribution, 1).blocks[1]).toMatchObject({
+      title: "Traslado de Atracción de prueba a Localidad base",
+      estimatedDurationMinutes: null,
+      confidence: "needs_verification",
+    });
+    expect(distribution.warnings).toEqual([
+      "El traslado de Atracción de prueba a Localidad base no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
+    ]);
+  });
+
+  it("skips the transfer when consecutive visits share a destination", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf([
+        experience({
+          id: "exp-home-1",
+          name: "Experiencia local 1",
+          estimatedDurationMinutes: 60,
+        }),
+        experience({
+          id: "exp-home-2",
+          name: "Experiencia local 2",
+          estimatedDurationMinutes: 60,
+        }),
+      ]),
+      catalogue,
+      [transportOption()],
+    );
+
+    expect(idsByDay(distribution)).toEqual([["exp-home-1", "exp-home-2"]]);
+    expect(
+      dayOf(distribution, 1).blocks.map((block) => block.kind),
+    ).toEqual(["visit", "visit"]);
+    expect(distribution.warnings).toEqual([]);
+  });
+
+  it("prefers compatible options with a known duration deterministically", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [
+        transportOption({ id: "opt-bus-unknown", estimatedDurationMinutes: null }),
+        transportOption({ id: "opt-bus-90", estimatedDurationMinutes: 90 }),
+        transportOption({ id: "opt-bus-120", estimatedDurationMinutes: 120 }),
+      ],
+    );
+
+    expect(dayOf(distribution, 1).blocks[1].estimatedDurationMinutes).toBe(90);
+    expect(dayOf(distribution, 1).blocks[1].confidence).toBe("estimated");
+    expect(distribution.warnings).toEqual([]);
+  });
+
+  it("does not count transfer blocks against the activity cap", () => {
+    const ranking = rankingOf([
+      ...homeThenAttraction(),
+      ...homeThenAttraction(
+        { id: "exp-home-2", name: "Experiencia local 2" },
+        { id: "exp-attraction-2", name: "Experiencia de atracción 2" },
+      ),
+    ]);
+
+    const distribution = distributeExperiences(
+      preferences({ days: 2 }),
+      ranking,
+      catalogue,
+      [],
+    );
+
+    expect(idsByDay(distribution)).toEqual([
+      ["exp-home-1", "transfer-1", "exp-attraction-1", "transfer-2", "exp-home-2"],
+      ["exp-attraction-2"],
+    ]);
+    expect(distribution.unscheduled).toEqual([]);
+    expect(distribution.warnings).toHaveLength(2);
+  });
+
+  it("warns once per unknown transfer pair, even across days", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 2 }),
+      rankingOf([
+        ...homeThenAttraction(),
+        experience({
+          id: "exp-home-2",
+          name: "Experiencia local 2",
+          estimatedDurationMinutes: 60,
+        }),
+        experience({
+          id: "exp-home-3",
+          name: "Experiencia local 3",
+          estimatedDurationMinutes: 60,
+        }),
+        experience({
+          id: "exp-attraction-2",
+          name: "Experiencia de atracción 2",
+          destinationId: attraction.id,
+          estimatedDurationMinutes: 60,
+        }),
+      ]),
+      catalogue,
+      [],
+    );
+
+    expect(idsByDay(distribution)).toEqual([
+      ["exp-home-1", "transfer-1", "exp-attraction-1", "transfer-2", "exp-home-2"],
+      ["exp-home-3", "transfer-3", "exp-attraction-2"],
+    ]);
+    expect(distribution.warnings).toHaveLength(2);
+    expect(
+      distribution.warnings.filter(
+        (warning) =>
+          warning ===
+          "El traslado de Localidad base a Atracción de prueba no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
+      ),
+    ).toHaveLength(1);
   });
 
   it("is deterministic for the same inputs", () => {
@@ -322,11 +701,13 @@ describe("distributeExperiences", () => {
       preferences(),
       rankingOf(experiences(5)),
       catalogue,
+      [],
     );
     const second = distributeExperiences(
       preferences(),
       rankingOf(experiences(5)),
       catalogue,
+      [],
     );
 
     expect(second).toEqual(first);
@@ -342,27 +723,41 @@ describe("distributeExperiences", () => {
       basePreferences,
       ranking,
       DESTINATIONS,
+      [],
     );
 
     expect(distribution.days.map((day) => day.dayNumber)).toEqual([1, 2, 3]);
     const lengths = distribution.days.map((day) => day.blocks.length);
-    expect(lengths).toEqual([3, 3, 0]);
+    expect(lengths).toEqual([5, 5, 0]);
     expect(distribution.unscheduled).toEqual([]);
-    expect(distribution.warnings).toHaveLength(2);
+    expect(distribution.warnings).toHaveLength(5);
     expect(distribution.warnings).toContain(
       "Algunas actividades del itinerario no tienen duración estimada en el catálogo, así que el tiempo total de esos días no se puede confirmar.",
     );
     expect(distribution.warnings).toContain(
       "Quedaron días del viaje sin actividades asignadas.",
     );
+    expect(distribution.warnings).toContain(
+      "El traslado de Tilcara a Purmamarca no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
+    );
   });
 
   it("rejects trips without travel days", () => {
     expect(() =>
-      distributeExperiences(preferences({ days: 0 }), rankingOf([]), catalogue),
+      distributeExperiences(
+        preferences({ days: 0 }),
+        rankingOf([]),
+        catalogue,
+        [],
+      ),
     ).toThrow(RangeError);
     expect(() =>
-      distributeExperiences(preferences({ days: 0 }), rankingOf([]), catalogue),
+      distributeExperiences(
+        preferences({ days: 0 }),
+        rankingOf([]),
+        catalogue,
+        [],
+      ),
     ).toThrow("at least one travel day");
   });
 });
