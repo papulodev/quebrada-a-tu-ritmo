@@ -281,9 +281,11 @@ Verificado el 2026-11-09: `features/itinerary/domain/distribute-experiences.ts` 
 - **Depende de:** QTR-017, QTR-018, QTR-019
 - **Resultado:** cada itinerario incluye razones breves y advertencias legibles.
 - **Criterios de aceptación:**
-  - [ ] Explica prioridades relacionadas con intereses, duración y movilidad.
-  - [ ] Explica por qué se omite o deja opcional una actividad cuando corresponda.
-  - [ ] No fabrica una explicación que contradiga los datos usados por el motor.
+  - [X] Explica prioridades relacionadas con intereses, duración y movilidad.
+  - [X] Explica por qué se omite o deja opcional una actividad cuando corresponda.
+  - [X] No fabrica una explicación que contradiga los datos usados por el motor.
+
+Verificado el 2026-11-09: `features/itinerary/domain/build-rationale.ts` implementa `buildRationale(input)` como función pura (NFR-04) que devuelve `string[]` a partir de `RationaleInput { preferences, ranking, distribution }`, reutilizando los tipos de dominio de QTR-017/QTR-018 sin duplicarlos. Las razones se emiten en orden estable: línea de intereses (solo si alguna experiencia incluida tiene `matchedInterests` no vacío) → línea de ritmo (solo si la distribución tiene días) → línea de movilidad (solo si hay traslado intra-día) → razones de exclusión del ranking → razones de no agendado de la distribución. La línea de intereses nombra como máximo tres experiencias (`MAX_NAMED_EXPERIENCES`), concuerda singular/plural con las nombradas, deduplica los intereses en orden de aparición sin tope y acuerda el sustantivo ("el interés elegido" / "los intereses elegidos") con la cantidad de etiquetas, usando las mismas etiquetas en español que el formulario (INTEREST_LABELS/MOBILITY_LABELS del módulo, alineadas con el wording del planner). Las líneas de ritmo y movilidad explican los topes por ritmo y la restricción de medios según la movilidad elegida (FR-15/FR-16), y las razones de exclusión y de no agendado se propagan verbatim desde el motor (FR-21), sin reformular ni inventar motivos que contradigan los datos usados para rankear y distribuir. Los `warnings` de la distribución quedan fuera del rationale a propósito: son advertencias de factibilidad que QTR-021 asignará a `Itinerary.warnings`. Los tests en `features/itinerary/domain/build-rationale.test.ts` (15 casos) cubren singular/plural, tope de tres nombres, deduplicación y concordancia de intereses, omisión de la línea cuando nada matchea, gating de ritmo y movilidad, ambas etiquetas de movilidad, propagación verbatim de exclusiones y no agendados, exclusión de warnings, orden estable del array y rationale vacío para salidas vacías del motor. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (135 tests en 13 archivos).
 
 ### QTR-021 — Exponer endpoint de generación de itinerario
 
