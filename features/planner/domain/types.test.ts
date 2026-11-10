@@ -69,6 +69,7 @@ describe("strategies and itineraries", () => {
 
   it("models itinerary blocks whose duration may be unknown", () => {
     const itinerary: Itinerary = {
+      strategyId: "excursiones-desde-salta",
       days: [
         {
           dayNumber: 1,
