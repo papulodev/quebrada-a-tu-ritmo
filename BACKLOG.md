@@ -160,10 +160,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-005
 - **Resultado:** contrato único para validar el formulario en el servidor.
 - **Criterios de aceptación:**
-  - [ ] Incluye días, origen, movilidad, base/alojamiento, presupuesto, intereses y ritmo.
-  - [ ] Rechaza tipos/valores inválidos y listas de intereses vacías cuando sean obligatorias.
-  - [ ] Se puede probar sin renderizar la UI.
-  - [ ] El error señala el campo que necesita corrección.
+  - [X] Incluye días, origen, movilidad, base/alojamiento, presupuesto, intereses y ritmo.
+  - [X] Rechaza tipos/valores inválidos y listas de intereses vacías cuando sean obligatorias.
+  - [X] Se puede probar sin renderizar la UI.
+  - [X] El error señala el campo que necesita corrección.
+
+Verificado el 2026-11-07: `features/planner/domain/validate-preferences.ts` acepta `input: unknown` y devuelve `PreferencesValidation`, una unión discriminada con `ok`, `value` e `issues`. Valida los siete campos del perfil, rechaza días no enteros o fuera de `[1, 30]`, orígenes y opciones desconocidas, `interests` vacíos o con ítems inválidos, y acumula los problemas en el orden de los campos con un `field` específico (`days`, `origin.destinationId`, `interests.2`, etc.). La validación no importa React ni módulos de servidor; `validate-preferences.test.ts` la cubre con `it.each` sobre entradas no válidas y 12 tests en total. No se agregó una librería de validación: `AGENTS.md` §7 exige aprobación explícita para dependencias nuevas.
 
 ### QTR-012 — Implementar reglas para seleccionar estrategias
 
@@ -171,10 +173,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-011
 - **Resultado:** función pura que devuelve estrategias candidatas según perfil.
 - **Criterios de aceptación:**
-  - [ ] Diferencia al menos escenario de excursión desde Salta, base en la Quebrada y recorrido con movilidad propia/combinada cuando corresponda.
-  - [ ] No devuelve siempre el mismo orden para todos los perfiles.
-  - [ ] Las condiciones desconocidas quedan reflejadas en advertencias.
-  - [ ] Incluye unit tests para al menos tres perfiles.
+  - [X] Diferencia al menos escenario de excursión desde Salta, base en la Quebrada y recorrido con movilidad propia/combinada cuando corresponda.
+  - [X] No devuelve siempre el mismo orden para todos los perfiles.
+  - [X] Las condiciones desconocidas quedan reflejadas en advertencias.
+  - [X] Incluye unit tests para al menos tres perfiles.
+
+Verificado el 2026-11-07: `features/planner/domain/select-strategies.ts` exporta `selectStrategies(preferences: TravelPreferences): TravelStrategy[]`, una función pura sin React, base de datos ni red. Devuelve cuatro candidatas —`excursiones-desde-salta`, `base-en-la-quebrada`, `recorrido-con-movilidad-propia-o-combinada` y `tren-solar`— puntuadas según origen, movilidad, días, ritmo y decisión de alojamiento; el orden se resuelve con `right.score - left.score || left.index - right.index`, así que es estable entre ejecuciones. Las condiciones que el catálogo no puede resolver no descartan estrategias: se agregan advertencias compartidas (origen fuera del catálogo, movilidad combinada sin tramos) y específicas por escenario (operador de excursiones, micros y combis, rutas y estacionamientos, horarios del Tren Solar, "El Tren Solar no cubre todos los destinos ni los traslados finales", localidad de base no especificada, días insuficientes, estrategia que no coincide con la movilidad elegida). Todas las candidatas usan `confidence: "needs_verification"` porque el catálogo aún no tiene horarios ni disponibilidad verificados. `select-strategies.test.ts` cubre cuatro perfiles (excursión desde Salta, base decidida, recorrido en auto y Tren Solar), comprueba que el primer id cambia entre perfiles, verifica las advertencias por condición desconocida y compara el resultado completo en dos llamadas para asegurar determinismo: 12 tests, 82 en total en 9 archivos, con `pnpm typecheck` y `pnpm lint` en verde. "Tilcara como base" no se implementó como estrategia separada: la cubre la estrategia de base genérica más la advertencia por localidad no especificada.
 
 ### QTR-013 — Definir modelo visual de tarjeta de estrategia
 
@@ -182,9 +186,11 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-012
 - **Resultado:** tarjeta reutilizable para comparar opciones.
 - **Criterios de aceptación:**
-  - [ ] Muestra nombre, para quién encaja, ventajas, limitaciones y datos por confirmar.
-  - [ ] Tiene foco visible y estructura accesible.
-  - [ ] Se adapta a móvil y escritorio.
+  - [X] Muestra nombre, para quién encaja, ventajas, limitaciones y datos por confirmar.
+  - [X] Tiene foco visible y estructura accesible.
+  - [X] Se adapta a móvil y escritorio.
+
+Verificado el 2026-11-07: `features/planner/components/StrategyCard.tsx` expone `StrategyCard({ strategy, name, defaultChecked })` y renderiza nombre, resumen, "Para quién encaja" (`fits`), "Ventajas" (`advantages`), "Limitaciones" (`limitations`), "Datos por confirmar" (`warnings`, con un mensaje explícito cuando no hay advertencias) y "Transporte previsto" (etiquetas legibles de `logistics`); el badge de `confidence` usa un `switch` exhaustivo para no mostrar un estado desconocido como confirmado. La tarjeta es una opción de un grupo de radios: el `<input type="radio">` queda `sr-only` pero focusable, se nombra con `aria-labelledby` (título) y se describe con `aria-describedby` (resumen), y el área clickeable es un `<label>` overlay con `htmlFor` al input —no un wrapper, porque un `<label>` solo admite phrasing content y envolver las secciones produciría HTML inválido—. El foco visible y la selección se resuelven con variantes `has-[:focus-visible]` (ring sobre la tarjeta) y `has-[:checked]` (borde y fondo), más un badge "Elegida" visible para no depender solo del color. El layout es mobile-first y pasa a dos columnas de ventajas/limitaciones con `sm:grid-cols-2`, con padding `sm:p-5`. `pnpm typecheck`, `pnpm lint` y `pnpm build` pasan, y `detect.mjs` no reporta hallazgos. La tarjeta todavía no se renderiza en ninguna página: se conecta al formulario y a la comparación en QTR-016, que es donde se puede comprobar en navegador.
 
 ### QTR-014 — Exponer endpoint para comparar estrategias
 
@@ -192,10 +198,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-009, QTR-011, QTR-012
 - **Resultado:** endpoint de servidor que recibe preferencias validadas y retorna estrategias tipadas.
 - **Criterios de aceptación:**
-  - [ ] Valida cada input en servidor.
-  - [ ] Devuelve estructura de error consistente para entrada inválida.
-  - [ ] No revela errores SQL ni secretos.
-  - [ ] Tiene al menos un test de respuesta válida y otro de inválida.
+  - [X] Valida cada input en servidor.
+  - [X] Devuelve estructura de error consistente para entrada inválida.
+  - [X] No revela errores SQL ni secretos.
+  - [X] Tiene al menos un test de respuesta válida y otro de inválida.
+
+Verificado el 2026-11-08: `app/api/compare/route.ts` exporta `POST(request: Request)` y responde `{ strategies: TravelStrategy[] }` con las cuatro candidatas de `selectStrategies`, sin acceso a base de datos: la comparación es una función pura del request, así que no hay consultas SQL que filtrar. Todo cuerpo se lee con `readJsonBody`, que envuelve `request.json()` y convierte un JSON malformado en `ApiError(400, "invalid_input", "El cuerpo de la solicitud debe ser JSON válido.")`; después `validatePreferences` recibe `unknown` y, si falla, se lanza `ApiError(400, "invalid_input", "Los datos de preferencias no son válidos.")`. Ambas respuestas y cualquier excepción inesperada pasan por `jsonError`, así que el cliente recibe siempre `{ error: { code, message } }` y un error interno se reduce a 500 `internal_error` con un mensaje genérico, sin stack, cadenas de conexión ni secretos. `app/api/compare/route.test.ts` cubre cuatro casos: 200 con estrategias válidas (compara el conjunto de ids contra `STRATEGY_IDS`), 400 por preferencias inválidas, 400 por JSON malformado y 500 sanitizado con un `Error` simulado que contiene `ECONNREFUSED` y una contraseña falsa. Los tests llaman al handler con `Request` nativo y no requieren servidor; `pnpm test` pasa con 86 tests en 10 archivos, y `pnpm typecheck`, `pnpm lint` y `pnpm build` están en verde (la ruta aparece como `ƒ /api/compare`). El envelope no incluye los `issues` por campo: el formulario de QTR-015 usa el mismo validador del lado del cliente para señalar el campo a corregir.
 
 ### QTR-015 — Construir el formulario del planificador
 
@@ -203,10 +211,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-011
 - **Resultado:** formulario usable para cargar preferencias.
 - **Criterios de aceptación:**
-  - [ ] Contiene los campos del contrato del dominio.
-  - [ ] Tiene etiquetas, errores, estados y valores por defecto razonables.
-  - [ ] La validación no borra respuestas válidas.
-  - [ ] El flujo se puede completar solo con teclado.
+  - [X] Contiene los campos del contrato del dominio.
+  - [X] Tiene etiquetas, errores, estados y valores por defecto razonables.
+  - [X] La validación no borra respuestas válidas.
+  - [X] El flujo se puede completar solo con teclado.
+
+Verificado el 2026-11-08: `features/planner/components/PlannerForm.tsx` y `app/planner/page.tsx` cubren los siete campos de `TravelPreferences` sin duplicar el contrato: días con `TRIP_DAY_LIMITS`, origen (`ORIGIN_KINDS`, con select de localidad solo cuando el origen es `quebrada_locality`), movilidad (cinco modos), alojamiento con la unión `LodgingBase` (casilla "base decidida" más destino, con la opción "Todavía sin definir" que produce `destinationId: null` en lugar de un valor inventado), presupuesto, intereses (los once de `INTERESTS` como checkboxes en grid `sm:grid-cols-2`) y ritmo. Los valores por defecto son explícitos y conservadores: 3 días, origen Salta, sin auto, sin base decidida, presupuesto medio, ritmo equilibrado e intereses vacíos; el campo de días vacío se mantiene como texto vacío y no se convierte en `0`. Cada control tiene etiqueta asociada (o `fieldset`/`legend` con `role="radiogroup"`), ayuda enlazada por `aria-describedby` y errores por campo renderizados junto al control con `aria-invalid` y `role="alert"`; al enviar con problemas, el foco salta al primer campo inválido usando `data-field`. La validación reutiliza `validatePreferences` —el mismo validador del endpoint— y solo escribe el objeto de errores: el resto del estado del formulario no se toca, así que una respuesta previa nunca se borra ni se reemplaza por un valor por defecto. Con un envío válido se muestra el panel "Preferencias validadas" con los valores normalizados; ese panel es informativo y no confirma disponibilidad ni reservas, y el formulario todavía no llama a `/api/compare` (QTR-016). En navegador, un script Playwright pasó 30 comprobaciones de teclado y accesibilidad: un único tab stop por grupo de radios, `Space` selecciona, `Enter` en un campo de texto envía, el error mueve el foco al control correspondiente y el flujo completo se puede terminar solo con teclado sin errores de consola. `pnpm typecheck`, `pnpm lint`, `pnpm test` (86 tests en 10 archivos) y `pnpm build` pasan, y `detect.mjs` no reporta hallazgos.
 
 ### QTR-016 — Conectar formulario con comparación de estrategias
 
@@ -214,10 +224,12 @@ Verificado el 2026-11-05: `scripts/db-seed.mjs` importa `DESTINATIONS` y `EXPERI
 - **Depende de:** QTR-013, QTR-014, QTR-015
 - **Resultado:** al enviar el formulario, se muestran opciones pertinentes.
 - **Criterios de aceptación:**
-  - [ ] Hay loading, error y estado sin resultados.
-  - [ ] El usuario puede volver atrás sin reingresar todo.
-  - [ ] Cada estrategia comunica sus dependencias no confirmadas.
-  - [ ] La comparación funciona en viewport móvil.
+  - [X] Hay loading, error y estado sin resultados.
+  - [X] El usuario puede volver atrás sin reingresar todo.
+  - [X] Cada estrategia comunica sus dependencias no confirmadas.
+  - [X] La comparación funciona en viewport móvil.
+
+Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (121 líneas) cubre los cuatro estados con un tipo exportado `ComparisonState` (`idle`, `loading`, `error`, `ready`) más el caso de arreglo vacío. El envío del formulario llama a `POST /api/compare` desde `handleSubmit`, después de validar del lado del cliente con el mismo `validatePreferences`; mientras corre, el formulario muestra "Comparando estrategias…" en un `role="status"` y deshabilita el botón sin cambiar su etiqueta, y al terminar lo rehabilita. Un fallo de red produce "No se pudo conectar con el comparador. Revise su conexión.", una respuesta no exitosa usa el mensaje del envelope `{ error: { code, message } }` con un texto de reserva, `internal_error` se traduce a un mensaje genérico y un payload que no respeta el contrato de `TravelStrategy` se rechaza con "La respuesta del comparador no tiene el formato esperado."; el error se anuncia con `role="alert"` y ofrece "Reintentar", que repite la última petición sin tocar el formulario. `{ strategies: [] }` muestra "Sin resultados" con el motivo ("No hay estrategias disponibles para estas preferencias."). El criterio de volver atrás se cumple por construcción: el formulario sigue montado mientras se muestran los resultados, así que "Volver a las preferencias" solo desplaza y enfoca `[data-field="days"]` y conserva todos los valores ya cargados. Cada `StrategyCard` muestra su insignia de confianza y la nota "Datos por confirmar" junto al grupo, y el contenedor usa `grid gap-4 xl:grid-cols-2`, que apila las tarjetas en una columna en móvil. La verificación funcional se hizo con un script Playwright sobre el build de producción servido en `127.0.0.1:3100`: 22 comprobaciones en verde, entre ellas que el POST enviado incluye los días e intereses elegidos, que el estado de carga dura lo esperado con el botón deshabilitado, que los estados de error, sin resultados, red caída y payload inválido muestran el mensaje correcto, que "Reintentar" recupera las estrategias y que a 390 px el ancho de desborde es `0px` sin errores de página. `pnpm typecheck`, `pnpm lint`, `pnpm test` (86 tests en 10 archivos) y `pnpm build` están en verde, y el chequeo de diseño de `impeccable` no reporta hallazgos.
 
 ---
 
