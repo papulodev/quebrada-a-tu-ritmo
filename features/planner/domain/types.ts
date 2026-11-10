@@ -11,6 +11,7 @@ import type {
   TransportMode,
 } from "../../catalog/domain/types";
 import type { ConfidenceStatus } from "../../catalog/domain/confidence";
+import type { UnscheduledExperience } from "../../itinerary/domain/distribute-experiences";
 import type { StrategyId } from "./select-strategies";
 
 export const ORIGIN_KINDS = [
@@ -116,4 +117,10 @@ export interface Itinerary {
   /** Why certain places were prioritised or discarded (FR-16). */
   rationale: string[];
   warnings: string[];
+  /**
+   * Ranked experiences that did not fit into any day, with the reason why
+   * (QTR-022). The reason is also part of `warnings`; presentation layers
+   * deduplicate it when showing both sections.
+   */
+  unscheduled: UnscheduledExperience[];
 }

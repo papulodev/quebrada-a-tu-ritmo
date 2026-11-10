@@ -306,10 +306,12 @@ Verificado el 2026-11-10: `app/api/itineraries/route.ts` exporta `POST(request: 
 - **Depende de:** QTR-020
 - **Resultado:** componentes para presentar un itinerario de forma escaneable.
 - **Criterios de aceptación:**
-  - [ ] Cada día muestra actividades en orden y tiempo estimado cuando se conoce.
-  - [ ] Se distinguen recomendaciones principales y opcionales.
-  - [ ] Se muestran advertencias y estado de los datos sin depender solo de color.
-  - [ ] La lectura es cómoda en móvil.
+  - [X] Cada día muestra actividades en orden y tiempo estimado cuando se conoce.
+  - [X] Se distinguen recomendaciones principales y opcionales.
+  - [X] Se muestran advertencias y estado de los datos sin depender solo de color.
+  - [X] La lectura es cómoda en móvil.
+
+Verificado el 2026-11-10: `features/itinerary/components/` incorpora cuatro Server Components sin estado (`ItinerarySummary`, `ItineraryDaySummary`, `ItineraryBlockItem`, `ItineraryOptionalList`) que presentan un `Itinerary` sin acoplar la API ni el motor: para mostrar las actividades que no entraron en ningún día, `Itinerary` (en `features/planner/domain/types.ts`) recibe el campo aditivo `unscheduled: UnscheduledExperience[]` al final, que `generateItinerary` propaga desde la distribución existente, de modo que la respuesta de `/api/itineraries` solo suma información y no cambia su contrato previo. Cada día se renderiza como tarjeta (`ItineraryDaySummary`) con `<h3>` "Día N" y la categoría de destino como chip (`DESTINATION_CATEGORY_LABELS`), y sus bloques en un `<ol>` ordenado donde cada `ItineraryBlockItem` muestra título, chip de tipo (`BLOCK_KIND_LABELS`: Visita/Traslado/Comida/Descanso), duración estimada formateada por `formatDuration` ("1 h 30 min") o el aviso explícito "Duración por confirmar" cuando `estimatedDurationMinutes` es `null` (FR-14: nunca se trata como cero), notas cuando existen y un badge de confianza que escribe el estado ("Dato verificado" / "Dato estimado" / "Datos por confirmar") además del color (NFR-02), usando el espejo `CONFIDENCE_BADGES` para no importar componentes del planner. Las recomendaciones principales quedan en el plan por día y las opcionales en la sección "Actividades opcionales" (`ItineraryOptionalList`), que lista cada experiencia no agendada con el motivo verbatim del motor (FR-21); las mismas razones se deduplican de `warnings` solo en presentación mediante `filterUnscheduledReasons` (Set con igualdad exacta), dejando el endpoint intacto. `ItinerarySummary` compone todo con jerarquía h2/h3, secciones `aria-labelledby` ("Plan por día", "Actividades opcionales", "Advertencias", "Cómo armamos este itinerario") y texto secundario consistente con StrategyComparison. El layout es mobile-first en columna única (`flex flex-col`, tarjetas `rounded-2xl border border-base-300 bg-base-100 p-4`, chips `badge badge-sm`), sin interactividad: el wiring de página y fetch es QTR-023, por eso no hay E2E nuevos. Los helpers puros viven en `features/itinerary/domain/presentation.ts` con 8 tests propios (`presentation.test.ts`), más 3 aserciones de `unscheduled` en `generate-itinerary.test.ts` y 1 en `route.test.ts`. `pnpm run typecheck`, `pnpm run lint`, `pnpm run test` (153 tests en 16 archivos) y `pnpm run build` en verde; el detector de impeccable no reportó hallazgos.
 
 ### QTR-023 — Conectar comparación, selección e itinerario
 

@@ -89,6 +89,7 @@ describe("strategies and itineraries", () => {
       ],
       rationale: ["Se priorizó una zona para evitar traslados largos."],
       warnings: ["Duración de la visita sin confirmar."],
+      unscheduled: [],
     };
 
     const block = itinerary.days[0]?.blocks[0];

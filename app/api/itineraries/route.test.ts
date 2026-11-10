@@ -148,6 +148,7 @@ describe("POST /api/itineraries", () => {
     expect(body.itinerary.days[0].blocks[0].title).toBe(
       "Caminata por el pueblo",
     );
+    expect(body.itinerary.unscheduled).toEqual([]);
   });
 
   it("rejects preferences that fail server-side validation", async () => {

@@ -95,6 +95,11 @@ describe("generateItinerary", () => {
       "Quedaron días del viaje sin actividades asignadas.",
       "La duración estimada de Trekking exigente (99999 minutos) no entra en un día con ritmo equilibrado.",
     ]);
+    expect(itinerary.unscheduled).toHaveLength(1);
+    expect(itinerary.unscheduled[0].experience.name).toBe("Trekking exigente");
+    expect(itinerary.unscheduled[0].reason).toBe(
+      "La duración estimada de Trekking exigente (99999 minutos) no entra en un día con ritmo equilibrado.",
+    );
     expect(itinerary.rationale.length).toBeGreaterThan(0);
   });
 

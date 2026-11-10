@@ -90,5 +90,7 @@ export function generateItinerary({
     days: distribution.days,
     rationale: buildRationale({ preferences, ranking, distribution }),
     warnings,
+    // Ranked experiences that did not fit any day, shown as options (QTR-022).
+    unscheduled: distribution.unscheduled,
   };
 }
