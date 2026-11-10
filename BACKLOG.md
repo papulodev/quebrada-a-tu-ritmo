@@ -254,11 +254,13 @@ Verificado el 2026-11-09: `features/itinerary/domain/rank-experiences.ts` implem
 - **Depende de:** QTR-017
 - **Resultado:** motor que distribuye experiencias entre los días disponibles.
 - **Criterios de aceptación:**
-  - [ ] Respeta cantidad de días.
-  - [ ] Usa duración de actividad cuando está disponible.
-  - [ ] Aplica distintos límites para ritmo relajado, equilibrado e intensivo.
-  - [ ] No trata las duraciones desconocidas como cero.
-  - [ ] Tiene tests para 1, 3 y 5 días (dentro de los límites de producto).
+  - [X] Respeta cantidad de días.
+  - [X] Usa duración de actividad cuando está disponible.
+  - [X] Aplica distintos límites para ritmo relajado, equilibrado e intensivo.
+  - [X] No trata las duraciones desconocidas como cero.
+  - [X] Tiene tests para 1, 3 y 5 días (dentro de los límites de producto).
+
+Verificado el 2026-11-09: `features/itinerary/domain/distribute-experiences.ts` implementa `distributeExperiences(preferences, ranking, destinations)` como función pura que devuelve `ExperienceDistribution` con `days` (`ItineraryDay` con `dayNumber`, `destinationCategory` y `blocks`), `warnings` y `unscheduled` (`UnscheduledExperience` con `experience` y `reason`). La distribución es un greedy first-fit determinista sobre `ranking.included` en orden de ranking: cada experiencia se agenda en el primer día con cupo, y el viaje siempre tiene exactamente `preferences.days` días numerados desde 1; `days: 0` (o no entero) lanza `RangeError` ("at least one travel day"). Cada ritmo aplica límites distintos: relajado 2 actividades/240 minutos, equilibrado 3/360 e intensivo 4/480 por día; una experiencia con duración conocida entra solo si `usedMinutes + duración <= budgetMinutes`, mientras que una duración desconocida jamás se trata como cero (FR-12): consume cupo de actividades, no suma minutos y marca el día con `hasUnknownDuration` (los bloques conservan `estimatedDurationMinutes: null`). Lo que no entra queda en `unscheduled` con razón en español que distingue "No queda lugar" de la duración mayor que el presupuesto del día. `destinationCategory` de cada día es la categoría del destino del primer bloque (`null` si el día queda vacío). Los `warnings` son genéricos y en orden fijo: uno si algún día tiene actividades sin duración estimada y otro si algún día queda sin actividades. Los tests en `features/itinerary/domain/distribute-experiences.test.ts` (12 casos) cubren viajes de 1, 3 y 5 días, los tres ritmos, presupuesto de minutos con duraciones conocidas, duración desconocida sin contar como cero, experiencia más larga que el día, ranking vacío, categorías por destino, determinismo, rechazo de `days: 0` y un smoke test contra el catálogo real (`EXPERIENCES`/`DESTINATIONS`) que detecta drift. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (109 tests en 12 archivos).
 
 ### QTR-019 — Considerar traslados y advertencias de factibilidad
 
