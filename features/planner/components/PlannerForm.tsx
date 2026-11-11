@@ -11,6 +11,10 @@
 // posts the preferences to `/api/compare` and renders the returned strategies
 // below the form. Every answer stays in place, so the traveller can adjust and
 // compare again without re-entering anything (QTR-016).
+//
+// QTR-023: choosing a strategy posts `{ strategyId, preferences }` to
+// `/api/itineraries` with the same validated answers, so the itinerary step
+// never asks for them again.
 
 import { useId, useRef, useState, type FormEvent } from "react";
 
@@ -22,6 +26,7 @@ import {
   INTERESTS,
   TRANSPORT_MODES,
 } from "../../catalog/domain/types";
+import { isStrategyId, type StrategyId } from "../domain/select-strategies";
 import type {
   LodgingBase,
   Mobility,
@@ -32,6 +37,7 @@ import type {
   TravelStrategy,
 } from "../domain/types";
 import { MOBILITIES, ORIGIN_KINDS, PACES } from "../domain/types";
+import { validateItineraryResponse } from "../domain/validate-itinerary-response";
 import {
   TRIP_DAY_LIMITS,
   validatePreferences,
@@ -40,6 +46,7 @@ import {
 import {
   StrategyComparison,
   type ComparisonState,
+  type ItineraryState,
 } from "./StrategyComparison";
 
 const ORIGIN_LABELS: Record<OriginKind, string> = {
@@ -351,6 +358,14 @@ export function PlannerForm() {
   const [comparison, setComparison] = useState<ComparisonState>({
     status: "idle",
   });
+  const [selectedStrategyId, setSelectedStrategyId] =
+    useState<StrategyId | null>(null);
+  const [itinerary, setItinerary] = useState<ItineraryState>({
+    status: "idle",
+  });
+  // Request token for itinerary generation: bumping it discards responses
+  // from a previous selection or comparison.
+  const generationRef = useRef(0);
 
   const daysError = errors.days;
   const originError = errors.origin;
@@ -384,6 +399,11 @@ export function PlannerForm() {
         return;
       }
     }
+  }
+
+  function resetItinerary() {
+    generationRef.current += 1;
+    setItinerary({ status: "idle" });
   }
 
   async function compare(preferences: TravelPreferences) {
@@ -428,10 +448,81 @@ export function PlannerForm() {
     }
 
     setComparison({ status: "ready", strategies });
+    setSelectedStrategyId(
+      strategies.length > 0 && isStrategyId(strategies[0].id)
+        ? strategies[0].id
+        : null,
+    );
+  }
+
+  // Generates the itinerary for the chosen strategy by posting the validated
+  // answers to /api/itineraries. The generation token discards responses
+  // that arrive after a newer selection or comparison started.
+  async function generate(
+    preferences: TravelPreferences,
+    strategyId: StrategyId,
+  ) {
+    const request = ++generationRef.current;
+    setItinerary({ status: "loading" });
+
+    let response: Response;
+    try {
+      response = await fetch("/api/itineraries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ strategyId, preferences }),
+      });
+    } catch (error) {
+      if (request !== generationRef.current) {
+        return;
+      }
+
+      console.error(error);
+      setItinerary({
+        status: "error",
+        message:
+          "No se pudo conectar con el generador de itinerarios. Revise su conexión.",
+      });
+      return;
+    }
+
+    if (request !== generationRef.current) {
+      return;
+    }
+
+    const payload = await readJsonPayload(response);
+    if (request !== generationRef.current) {
+      return;
+    }
+
+    if (!response.ok) {
+      setItinerary({
+        status: "error",
+        message:
+          readErrorMessage(payload) ??
+          "No se pudo generar el itinerario. Intente de nuevo.",
+      });
+      return;
+    }
+
+    const itineraryResult = validateItineraryResponse(payload);
+    if (itineraryResult === null) {
+      setItinerary({
+        status: "error",
+        message: "La respuesta del itinerario no tiene el formato esperado.",
+      });
+      return;
+    }
+
+    setItinerary({ status: "ready", itinerary: itineraryResult });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // A new comparison run invalidates any generated itinerary, also when
+    // validation fails: the traveller is back to adjusting answers.
+    resetItinerary();
 
     const origin =
       originKind === "quebrada_locality"
@@ -487,6 +578,19 @@ export function PlannerForm() {
     }
 
     void compare(comparison.preferences);
+  }
+
+  function handleSelectStrategy(strategyId: StrategyId) {
+    setSelectedStrategyId(strategyId);
+    resetItinerary();
+  }
+
+  function handleGenerate() {
+    if (validated === null || selectedStrategyId === null) {
+      return;
+    }
+
+    void generate(validated, selectedStrategyId);
   }
 
   const daysHintId = fieldId("days-hint");
@@ -736,6 +840,10 @@ export function PlannerForm() {
 
       <StrategyComparison
         state={comparison}
+        selectedStrategyId={selectedStrategyId}
+        onSelectStrategy={handleSelectStrategy}
+        itinerary={itinerary}
+        onGenerate={handleGenerate}
         onBack={handleBack}
         onRetry={handleRetry}
       />

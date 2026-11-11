@@ -1,9 +1,10 @@
 // Itinerary summary (QTR-022).
 //
-// Server component: renders the generated itinerary in a scannable layout —
-// the per-day plan, the activities that did not fit any day, the engine
-// warnings and the rationale. Interactive wiring (fetching and selecting)
-// belongs to QTR-023, so this tree stays server-rendered by design.
+// Presentational component: renders the generated itinerary in a scannable
+// layout — the per-day plan, the activities that did not fit any day, the
+// engine warnings and the rationale. QTR-023 mounts it inside the planner's
+// client tree, so it must stay free of state, effects and platform APIs; it
+// could still be rendered from a Server Component if a route ever needs it.
 
 import type { Itinerary } from "../../planner/domain/types";
 

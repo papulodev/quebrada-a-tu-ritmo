@@ -7,6 +7,10 @@
 // focusable, and the card reflects focus and selection through `has-*`
 // variants, which keeps the focus ring visible without duplicating state.
 //
+// QTR-023: the comparison panel owns the checked state, so the radio is
+// controlled through `checked`/`onSelect` and switching strategies stays
+// consistent with the itinerary step.
+//
 // The whole card is one <label> target, but the label is an overlay instead of
 // a wrapper: a label may only contain phrasing content, so wrapping the
 // sections would produce invalid HTML.
@@ -46,13 +50,16 @@ interface StrategyCardProps {
   strategy: TravelStrategy;
   /** Radio group name. Every card in one comparison shares it. */
   name: string;
-  defaultChecked?: boolean;
+  checked: boolean;
+  /** Selects this strategy in the comparison panel. */
+  onSelect: () => void;
 }
 
 export function StrategyCard({
   strategy,
   name,
-  defaultChecked = false,
+  checked,
+  onSelect,
 }: StrategyCardProps) {
   const inputId = useId();
   const titleId = useId();
@@ -66,7 +73,8 @@ export function StrategyCard({
         type="radio"
         name={name}
         value={strategy.id}
-        defaultChecked={defaultChecked}
+        checked={checked}
+        onChange={onSelect}
         aria-labelledby={titleId}
         aria-describedby={summaryId}
         className="sr-only"

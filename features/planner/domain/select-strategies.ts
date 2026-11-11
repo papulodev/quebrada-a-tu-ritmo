@@ -21,6 +21,10 @@ export const STRATEGY_IDS = [
 
 export type StrategyId = (typeof STRATEGY_IDS)[number];
 
+export function isStrategyId(value: unknown): value is StrategyId {
+  return STRATEGY_IDS.some((id) => id === value);
+}
+
 function formatDays(days: number): string {
   return days === 1 ? "1 día" : `${days} días`;
 }
