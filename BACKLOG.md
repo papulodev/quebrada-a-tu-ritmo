@@ -241,10 +241,12 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-005, QTR-007, QTR-011
 - **Resultado:** función pura que ordena experiencias por restricciones e intereses.
 - **Criterios de aceptación:**
-  - [ ] Excluye lo incompatible con el perfil cuando se pueda determinar.
-  - [ ] Puntúa intereses y evita resultados idénticos para perfiles diferentes.
-  - [ ] No descarta silenciosamente experiencias por datos desconocidos.
-  - [ ] Incluye tests de límites y datos incompletos.
+  - [X] Excluye lo incompatible con el perfil cuando se pueda determinar.
+  - [X] Puntúa intereses y evita resultados idénticos para perfiles diferentes.
+  - [X] No descarta silenciosamente experiencias por datos desconocidos.
+  - [X] Incluye tests de límites y datos incompletos.
+
+Verificado el 2026-11-09: `features/itinerary/domain/rank-experiences.ts` implementa `rankExperiences(preferences, experiences, destinations)` como función pura (NFR-04: sin React, base de datos ni red) que devuelve `ExperienceRanking` con `included` (`ScoredExperience` con `experience`, `score` y `matchedInterests`) y `excluded` (`ExcludedExperience` con `reason`). La puntuación usa pesos explícitos: +3 por cada interés compartido, +2 si la experiencia está en el destino elegido como base de alojamiento (solo cuando `lodging.decided` y `destinationId` no es `null`), y −2 cuando el presupuesto del viajero y el de la experiencia son ambos conocidos y el de la experiencia es superior; una penalización, nunca una exclusión. Las únicas exclusiones son determinables y con razón explícita en español: destino ausente en el catálogo y destino inactivo; todo lo demás (duración, costo, fuente desconocidos, sin coincidencia de intereses, base en otro destino, presupuesto superior) se mantiene en el ranking, y `null` jamás cuenta como cero ni provoca descarte silencioso. El orden es determinista: puntaje descendente y, en empates, orden de declaración. Dos perfiles con intereses distintos producen ordenaciones distintas (FR-15). Los tests en `features/itinerary/domain/rank-experiences.test.ts` (11 casos) cubren puntuación y matchedInterests, diferenciación por perfil, boost de base, base sin destino, penalización de presupuesto sin exclusión, ambas exclusiones con su razón, lista vacía, orden de declaración en empates, datos logísticos desconocidos, y un smoke test contra el catálogo real (`EXPERIENCES`/`DESTINATIONS`) que detecta drift. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (97 tests en 11 archivos).
 
 ### QTR-018 — Distribuir actividades por días y ritmo
 
@@ -252,11 +254,13 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-017
 - **Resultado:** motor que distribuye experiencias entre los días disponibles.
 - **Criterios de aceptación:**
-  - [ ] Respeta cantidad de días.
-  - [ ] Usa duración de actividad cuando está disponible.
-  - [ ] Aplica distintos límites para ritmo relajado, equilibrado e intensivo.
-  - [ ] No trata las duraciones desconocidas como cero.
-  - [ ] Tiene tests para 1, 3 y 5 días (dentro de los límites de producto).
+  - [X] Respeta cantidad de días.
+  - [X] Usa duración de actividad cuando está disponible.
+  - [X] Aplica distintos límites para ritmo relajado, equilibrado e intensivo.
+  - [X] No trata las duraciones desconocidas como cero.
+  - [X] Tiene tests para 1, 3 y 5 días (dentro de los límites de producto).
+
+Verificado el 2026-11-09: `features/itinerary/domain/distribute-experiences.ts` implementa `distributeExperiences(preferences, ranking, destinations)` como función pura que devuelve `ExperienceDistribution` con `days` (`ItineraryDay` con `dayNumber`, `destinationCategory` y `blocks`), `warnings` y `unscheduled` (`UnscheduledExperience` con `experience` y `reason`). La distribución es un greedy first-fit determinista sobre `ranking.included` en orden de ranking: cada experiencia se agenda en el primer día con cupo, y el viaje siempre tiene exactamente `preferences.days` días numerados desde 1; `days: 0` (o no entero) lanza `RangeError` ("at least one travel day"). Cada ritmo aplica límites distintos: relajado 2 actividades/240 minutos, equilibrado 3/360 e intensivo 4/480 por día; una experiencia con duración conocida entra solo si `usedMinutes + duración <= budgetMinutes`, mientras que una duración desconocida jamás se trata como cero (FR-12): consume cupo de actividades, no suma minutos y marca el día con `hasUnknownDuration` (los bloques conservan `estimatedDurationMinutes: null`). Lo que no entra queda en `unscheduled` con razón en español que distingue "No queda lugar" de la duración mayor que el presupuesto del día. `destinationCategory` de cada día es la categoría del destino del primer bloque (`null` si el día queda vacío). Los `warnings` son genéricos y en orden fijo: uno si algún día tiene actividades sin duración estimada y otro si algún día queda sin actividades. Los tests en `features/itinerary/domain/distribute-experiences.test.ts` (12 casos) cubren viajes de 1, 3 y 5 días, los tres ritmos, presupuesto de minutos con duraciones conocidas, duración desconocida sin contar como cero, experiencia más larga que el día, ranking vacío, categorías por destino, determinismo, rechazo de `days: 0` y un smoke test contra el catálogo real (`EXPERIENCES`/`DESTINATIONS`) que detecta drift. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (109 tests en 12 archivos).
 
 ### QTR-019 — Considerar traslados y advertencias de factibilidad
 
@@ -264,10 +268,12 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-008, QTR-017, QTR-018
 - **Resultado:** el motor incorpora traslados conocidos y marca combinaciones inciertas.
 - **Criterios de aceptación:**
-  - [ ] Cuando hay duración verificada/estimada de traslado, se suma al plan.
-  - [ ] Cuando no existe, el resultado muestra `needs_verification` y no declara confirmada la combinación.
-  - [ ] Se prueban escenarios sin auto y con auto.
-  - [ ] No se inventan frecuencias ni salidas de transporte.
+  - [X] Cuando hay duración verificada/estimada de traslado, se suma al plan.
+  - [X] Cuando no existe, el resultado muestra `needs_verification` y no declara confirmada la combinación.
+  - [X] Se prueban escenarios sin auto y con auto.
+  - [X] No se inventan frecuencias ni salidas de transporte.
+
+Verificado el 2026-11-09: `features/itinerary/domain/distribute-experiences.ts` extiende `distributeExperiences(preferences, ranking, destinations, transportOptions)` para traslados intra-día: entre dos visitas consecutivas del mismo día en destinos distintos inserta un bloque `transfer` (`transfer-${n}` con contador global, `destinationId` del destino de llegada) elegido entre las opciones compatibles con la movilidad del viajero (`MOBILITY_MODES`: `without_car` excluye auto, `own_car` solo auto, `guided_excursions`, `solar_train` y `mixed` restringen a su modo); si ninguna opción es compatible el traslado queda desconocido, sin fallback silencioso a un modo incompatible. La selección es determinista (prioriza duración conocida y, en empates, orden de declaración), el título usa etiquetas en español del modo (`Traslado en colectivo/auto/tren solar/excursión guiada de X a Y`) y las notas de horario pasan del catálogo sin inventar frecuencias ni salidas (FR-13). La duración de traslado conocida se suma al presupuesto de minutos del día junto con la de las visitas (FR-10), mientras que los traslados nunca consumen el cupo de actividades del ritmo; una duración de traslado desconocida jamás se trata como cero (FR-14): el bloque sale con `estimatedDurationMinutes: null` y `confidence: "needs_verification"`, y se emite una advertencia en español por cada par origen→destino único sin duración confirmada (esa combinación "no se puede declarar confirmada"), desduplicada entre días y ubicada después de los dos avisos genéricos de QTR-018. El lookup de opciones es direccional (clave origen→destino, sin simetría asumida). Los tests en `features/itinerary/domain/distribute-experiences.test.ts` (23 casos) cubren inserción y forma del bloque de traslado, suma de la duración al presupuesto (rechaza por presupuesto con traslado de 100 minutos y acepta con 50), ausencia de datos con advertencia exacta, opción sin duración no confirmada, los cinco modos de movilidad, escenarios sin auto y con auto sin coincidencia de modo, direccionalidad, saltar traslados dentro del mismo destino, preferencia determinista por duración conocida, traslados fuera del cupo de actividades, advertencia única por par entre días, determinismo, y un smoke test contra el catálogo real pasando `[]` como opciones de transporte (QTR-037: el MVP no carga datos de transporte) que detecta drift. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (120 tests en 12 archivos).
 
 ### QTR-020 — Explicar las decisiones del motor
 
@@ -275,9 +281,11 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-017, QTR-018, QTR-019
 - **Resultado:** cada itinerario incluye razones breves y advertencias legibles.
 - **Criterios de aceptación:**
-  - [ ] Explica prioridades relacionadas con intereses, duración y movilidad.
-  - [ ] Explica por qué se omite o deja opcional una actividad cuando corresponda.
-  - [ ] No fabrica una explicación que contradiga los datos usados por el motor.
+  - [X] Explica prioridades relacionadas con intereses, duración y movilidad.
+  - [X] Explica por qué se omite o deja opcional una actividad cuando corresponda.
+  - [X] No fabrica una explicación que contradiga los datos usados por el motor.
+
+Verificado el 2026-11-09: `features/itinerary/domain/build-rationale.ts` implementa `buildRationale(input)` como función pura (NFR-04) que devuelve `string[]` a partir de `RationaleInput { preferences, ranking, distribution }`, reutilizando los tipos de dominio de QTR-017/QTR-018 sin duplicarlos. Las razones se emiten en orden estable: línea de intereses (solo si alguna experiencia incluida tiene `matchedInterests` no vacío) → línea de ritmo (solo si la distribución tiene días) → línea de movilidad (solo si hay traslado intra-día) → razones de exclusión del ranking → razones de no agendado de la distribución. La línea de intereses nombra como máximo tres experiencias (`MAX_NAMED_EXPERIENCES`), concuerda singular/plural con las nombradas, deduplica los intereses en orden de aparición sin tope y acuerda el sustantivo ("el interés elegido" / "los intereses elegidos") con la cantidad de etiquetas, usando las mismas etiquetas en español que el formulario (INTEREST_LABELS/MOBILITY_LABELS del módulo, alineadas con el wording del planner). Las líneas de ritmo y movilidad explican los topes por ritmo y la restricción de medios según la movilidad elegida (FR-15/FR-16), y las razones de exclusión y de no agendado se propagan verbatim desde el motor (FR-21), sin reformular ni inventar motivos que contradigan los datos usados para rankear y distribuir. Los `warnings` de la distribución quedan fuera del rationale a propósito: son advertencias de factibilidad que QTR-021 asignará a `Itinerary.warnings`. Los tests en `features/itinerary/domain/build-rationale.test.ts` (15 casos) cubren singular/plural, tope de tres nombres, deduplicación y concordancia de intereses, omisión de la línea cuando nada matchea, gating de ritmo y movilidad, ambas etiquetas de movilidad, propagación verbatim de exclusiones y no agendados, exclusión de warnings, orden estable del array y rationale vacío para salidas vacías del motor. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (135 tests en 13 archivos).
 
 ### QTR-021 — Exponer endpoint de generación de itinerario
 
@@ -285,10 +293,12 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-009, QTR-011, QTR-018, QTR-019, QTR-020
 - **Resultado:** endpoint que recibe estrategia y preferencias y devuelve itinerario tipado.
 - **Criterios de aceptación:**
-  - [ ] Input validado en servidor.
-  - [ ] Resultado agrupado por día con actividades, duración y estado de confianza.
-  - [ ] Errores de entrada y de servidor se manejan por separado.
-  - [ ] Tests para un perfil válido y para datos insuficientes.
+  - [X] Input validado en servidor.
+  - [X] Resultado agrupado por día con actividades, duración y estado de confianza.
+  - [X] Errores de entrada y de servidor se manejan por separado.
+  - [X] Tests para un perfil válido y para datos insuficientes.
+
+Verificado el 2026-11-10: `app/api/itineraries/route.ts` exporta `POST(request: Request)` y responde `{ itinerary: Itinerary }`; para ello, `Itinerary` (en `features/planner/domain/types.ts`) incorpora `strategyId` como primer campo, de modo que la respuesta identifica la estrategia que la generó. Cada día del resultado agrupa sus bloques con título, tipo (`visit` o `transfer`), duración estimada (`null` cuando no se conoce, nunca tratada como cero) y `confidence` que no declara confirmados los datos sin verificar. Todo cuerpo se lee con `readJsonBody`, que envuelve `request.json()` y convierte un JSON malformado en `ApiError(400, "invalid_input", "El cuerpo de la solicitud debe ser JSON válido.")`; después el request se valida con guardas sin `as` (un cuerpo sin `strategyId` o `preferences` recibe 400 "La solicitud no tiene el formato esperado."), el id de estrategia se comprueba contra `STRATEGY_IDS` (400 "La estrategia elegida no es válida.") y las preferencias pasan por `validatePreferences` (400 "Los datos de preferencias no son válidos."), el mismo validador del endpoint de comparación y del formulario. Entrada inválida y fallo de servidor quedan separados: los cuatro rechazos de entrada salen con 400 `invalid_input`, mientras que cualquier excepción del repositorio pasa por `jsonError` y se reduce a 500 `internal_error` con mensaje genérico, sin stack, cadenas de conexión ni secretos. El handler no toca la base de datos: delega en `features/itinerary/services/generate-itinerary.ts`, que lee en paralelo destinos, experiencias y opciones de transporte mediante las nuevas consultas `listExperiences()` y `listTransportOptions()` de `catalog-repository.ts` (ambas `ORDER BY id` para que el motor vea listas estables) y llama a la composición pura `generateItinerary` (QTR-017–QTR-020), que además defiende sus invariantes con un `RangeError` si `days` no es utilizable; un catálogo sin experiencias produce días vacíos con la advertencia explícita `EMPTY_CATALOG_WARNING` en lugar de un plan inventado. `app/api/itineraries/route.test.ts` cubre siete casos con `Request` nativo y el repositorio simulado: 200 con itinerario completo, 400 por preferencias inválidas (`days: 0`), 400 por estrategia desconocida, 400 por JSON malformado, 400 por cuerpo sin la forma esperada, 200 con catálogo vacío y 500 sanitizado con un `Error` simulado que contiene `ECONNREFUSED` y una contraseña falsa. `pnpm typecheck`, `pnpm lint` y `pnpm test` en verde (145 tests en 15 archivos), y `pnpm build` muestra la ruta como `ƒ /api/itineraries`. E2E no aplica todavía porque no hay UI de este flujo: la comprobación en navegador llega con QTR-022/QTR-023, cuando el resumen se conecte a este endpoint.
 
 ### QTR-022 — Diseñar el resumen por día
 
@@ -296,10 +306,12 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-020
 - **Resultado:** componentes para presentar un itinerario de forma escaneable.
 - **Criterios de aceptación:**
-  - [ ] Cada día muestra actividades en orden y tiempo estimado cuando se conoce.
-  - [ ] Se distinguen recomendaciones principales y opcionales.
-  - [ ] Se muestran advertencias y estado de los datos sin depender solo de color.
-  - [ ] La lectura es cómoda en móvil.
+  - [X] Cada día muestra actividades en orden y tiempo estimado cuando se conoce.
+  - [X] Se distinguen recomendaciones principales y opcionales.
+  - [X] Se muestran advertencias y estado de los datos sin depender solo de color.
+  - [X] La lectura es cómoda en móvil.
+
+Verificado el 2026-11-10: `features/itinerary/components/` incorpora cuatro Server Components sin estado (`ItinerarySummary`, `ItineraryDaySummary`, `ItineraryBlockItem`, `ItineraryOptionalList`) que presentan un `Itinerary` sin acoplar la API ni el motor: para mostrar las actividades que no entraron en ningún día, `Itinerary` (en `features/planner/domain/types.ts`) recibe el campo aditivo `unscheduled: UnscheduledExperience[]` al final, que `generateItinerary` propaga desde la distribución existente, de modo que la respuesta de `/api/itineraries` solo suma información y no cambia su contrato previo. Cada día se renderiza como tarjeta (`ItineraryDaySummary`) con `<h3>` "Día N" y la categoría de destino como chip (`DESTINATION_CATEGORY_LABELS`), y sus bloques en un `<ol>` ordenado donde cada `ItineraryBlockItem` muestra título, chip de tipo (`BLOCK_KIND_LABELS`: Visita/Traslado/Comida/Descanso), duración estimada formateada por `formatDuration` ("1 h 30 min") o el aviso explícito "Duración por confirmar" cuando `estimatedDurationMinutes` es `null` (FR-14: nunca se trata como cero), notas cuando existen y un badge de confianza que escribe el estado ("Dato verificado" / "Dato estimado" / "Datos por confirmar") además del color (NFR-02), usando el espejo `CONFIDENCE_BADGES` para no importar componentes del planner. Las recomendaciones principales quedan en el plan por día y las opcionales en la sección "Actividades opcionales" (`ItineraryOptionalList`), que lista cada experiencia no agendada con el motivo verbatim del motor (FR-21); las mismas razones se deduplican de `warnings` solo en presentación mediante `filterUnscheduledReasons` (Set con igualdad exacta), dejando el endpoint intacto. `ItinerarySummary` compone todo con jerarquía h2/h3, secciones `aria-labelledby` ("Plan por día", "Actividades opcionales", "Advertencias", "Cómo armamos este itinerario") y texto secundario consistente con StrategyComparison. El layout es mobile-first en columna única (`flex flex-col`, tarjetas `rounded-2xl border border-base-300 bg-base-100 p-4`, chips `badge badge-sm`), sin interactividad: el wiring de página y fetch es QTR-023, por eso no hay E2E nuevos. Los helpers puros viven en `features/itinerary/domain/presentation.ts` con 8 tests propios (`presentation.test.ts`), más 3 aserciones de `unscheduled` en `generate-itinerary.test.ts` y 1 en `route.test.ts`. `pnpm run typecheck`, `pnpm run lint`, `pnpm run test` (153 tests en 16 archivos) y `pnpm run build` en verde; el detector de impeccable no reportó hallazgos.
 
 ### QTR-023 — Conectar comparación, selección e itinerario
 
@@ -307,10 +319,12 @@ Verificado el 2026-11-08: `features/planner/components/StrategyComparison.tsx` (
 - **Depende de:** QTR-016, QTR-021, QTR-022
 - **Resultado:** un usuario selecciona estrategia y visualiza un plan generado.
 - **Criterios de aceptación:**
-  - [ ] La selección usa las preferencias introducidas previamente.
-  - [ ] Hay loading, error y botón para modificar respuestas.
-  - [ ] El itinerario no se presenta como confirmación de disponibilidad de transporte.
-  - [ ] Un recorrido completo funciona de inicio a resultado.
+  - [X] La selección usa las preferencias introducidas previamente.
+  - [X] Hay loading, error y botón para modificar respuestas.
+  - [X] El itinerario no se presenta como confirmación de disponibilidad de transporte.
+  - [X] Un recorrido completo funciona de inicio a resultado.
+
+Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra el flujo de punta a punta sin sacar el estado de la página. Al comparar, el formulario guarda las preferencias ya validadas, resetea cualquier itinerario previo con `resetItinerary()` y preselecciona la primera estrategia válida de la comparación; el panel `StrategyComparison` muestra un `fieldset` "Estrategias comparadas" donde cada `StrategyCard` es un `input` radio controlado (`useId()` para el `id`/`name` accesible) atado a `selectedStrategyId`, de modo que cambiar de estrategia descarta el itinerario anterior y evita mostrar un plan que ya no corresponde a la selección. El botón "Generar itinerario" queda deshabilitado mientras no hay selección o mientras el itinerario está en `loading`, y "Volver" regresa al formulario conservando las respuestas. La generación (`generate(preferences, strategyId)`) hace `POST /api/itineraries` con las preferencias del formulario y la estrategia elegida, y protege contra respuestas fuera de orden con un token en `generationRef`: sólo la última solicitud puede escribir el estado, así que una respuesta lenta de una selección anterior no pisa el resultado vigente. La respuesta se valida en runtime con `validateItineraryResponse(payload)` (`features/planner/domain/validate-itinerary-response.ts`), una función pura que recorre el cuerpo sin `as` y devuelve `null` si no respeta el contrato, de modo que un 200 con forma inesperada cae en el mismo estado de error que un fallo de red; los mensajes se normalizan con `readErrorMessage`. `ItineraryState` modela `idle | loading | error | ready`: `idle` no renderiza nada, `loading` usa `role="status"`, `error` muestra `role="alert"` con "Reintentar" y "Modificar respuestas", y `ready` compone el `<h2>` "Su itinerario", la estrategia elegida, el aviso `ITINERARY_DISCLAIMER` —que aclara que el plan es una estimación y no una confirmación de disponibilidad de transporte— y el `ItinerarySummary` de QTR-022; "Modificar respuestas" vuelve al formulario sin descartar lo cargado. Los resultados no usan `aria-live` porque la gestión de foco y anuncio queda para QTR-027, y no se agrega `app/itinerary/page.tsx`: el flujo vive en `/planner`. Para alinear los tipos sin `as`, `features/planner/domain/select-strategies.ts` exporta el guard canónico `isStrategyId(value): value is StrategyId` (implementado con `STRATEGY_IDS.some`), que `PlannerForm` y `StrategyComparison` usan al preseleccionar y al emitir la selección, porque `TravelStrategy.id` está tipado como `string` en el dominio. `validate-itinerary-response.test.ts` cubre payload válido, campos faltantes, tipos incorrectos y valores fuera de los enums. `pnpm run typecheck`, `pnpm run lint` y `pnpm run test` en verde (181 tests en 17 archivos), `pnpm run build` compila las 7 páginas estáticas con `/planner` y `/api/itineraries` presentes, y el detector de impeccable no reportó hallazgos. La verificación manual contra el servidor de desarrollo confirmó `POST /api/itineraries` con 200 y un itinerario real, y `GET /planner` con 200. E2E queda pendiente porque el repositorio todavía no tiene `tests/e2e/`.
 
 ---
 

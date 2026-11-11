@@ -79,6 +79,15 @@ export async function listExperiencesByDestination(
   return rows.map(mapExperience);
 }
 
+/** Every catalogue experience, ordered by id so the engine sees a stable list. */
+export async function listExperiences(): Promise<Experience[]> {
+  const { rows } = await getPool().query<ExperienceRow>(
+    `SELECT ${EXPERIENCE_COLUMNS} FROM experiences ORDER BY id`,
+  );
+
+  return rows.map(mapExperience);
+}
+
 /** Known ways of travelling from one destination to another. */
 export async function listTransportOptionsBetween(
   originDestinationId: string,
@@ -89,6 +98,15 @@ export async function listTransportOptionsBetween(
      WHERE origin_destination_id = $1 AND destination_destination_id = $2
      ORDER BY mode`,
     [originDestinationId, destinationDestinationId],
+  );
+
+  return rows.map(mapTransportOption);
+}
+
+/** Every known transport option, ordered by id so the engine sees a stable list. */
+export async function listTransportOptions(): Promise<TransportOption[]> {
+  const { rows } = await getPool().query<TransportOptionRow>(
+    `SELECT ${TRANSPORT_COLUMNS} FROM transport_options ORDER BY id`,
   );
 
   return rows.map(mapTransportOption);
