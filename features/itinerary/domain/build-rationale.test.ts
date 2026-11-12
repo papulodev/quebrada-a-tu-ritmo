@@ -55,6 +55,7 @@ function visitBlock(title: string): ItineraryBlock {
     destinationId: "dest-home",
     estimatedDurationMinutes: null,
     notes: null,
+    source: null,
     confidence: "needs_verification",
   };
 }
@@ -67,6 +68,7 @@ function transferBlock(): ItineraryBlock {
     destinationId: "dest-attraction",
     estimatedDurationMinutes: null,
     notes: null,
+    source: null,
     confidence: "needs_verification",
   };
 }

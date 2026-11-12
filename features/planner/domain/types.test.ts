@@ -82,6 +82,7 @@ describe("strategies and itineraries", () => {
               destinationId: "dest-tilcara",
               estimatedDurationMinutes: null,
               notes: null,
+              source: null,
               confidence: "needs_verification",
             },
           ],

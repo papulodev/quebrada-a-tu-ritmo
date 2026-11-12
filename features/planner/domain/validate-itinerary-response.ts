@@ -135,6 +135,7 @@ function isItineraryBlock(value: unknown): value is ItineraryBlock {
     (value.estimatedDurationMinutes === null ||
       isKnownMinutes(value.estimatedDurationMinutes)) &&
     (value.notes === null || typeof value.notes === "string") &&
+    (value.source === null || isSourceReference(value.source)) &&
     isConfidenceStatus(value.confidence)
   );
 }

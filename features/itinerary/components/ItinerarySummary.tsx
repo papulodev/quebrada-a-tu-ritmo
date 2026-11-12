@@ -8,7 +8,11 @@
 
 import type { Itinerary } from "../../planner/domain/types";
 
-import { filterUnscheduledReasons } from "../domain/presentation";
+import {
+  filterUnscheduledReasons,
+  hasUnverifiedBlocks,
+  UNVERIFIED_DATA_NOTICE,
+} from "../domain/presentation";
 import { ItineraryDaySummary } from "./ItineraryDaySummary";
 import { ItineraryOptionalList } from "./ItineraryOptionalList";
 
@@ -25,6 +29,12 @@ export function ItinerarySummary({ itinerary }: { itinerary: Itinerary }) {
       aria-label="Resumen del itinerario"
       className="flex flex-col gap-6"
     >
+      {hasUnverifiedBlocks(itinerary) ? (
+        <p className="rounded-box border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+          {UNVERIFIED_DATA_NOTICE}
+        </p>
+      ) : null}
+
       <section
         aria-labelledby="itinerary-days-heading"
         className="flex flex-col gap-4"

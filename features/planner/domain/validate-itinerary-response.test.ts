@@ -36,6 +36,11 @@ const validBlock = {
   destinationId: "dest-tilcara",
   estimatedDurationMinutes: 90,
   notes: null,
+  source: {
+    sourceName: "Catálogo de demostración",
+    sourceUrl: null,
+    verifiedAt: null,
+  },
   confidence: "estimated",
 };
 
@@ -187,6 +192,48 @@ describe("blocks", () => {
 
     expect(result).not.toBeNull();
   });
+
+  it("accepts a block without a recorded source", () => {
+    const result = validateItineraryResponse({
+      itinerary: {
+        ...validItinerary,
+        days: [{ ...validDay, blocks: [{ ...validBlock, source: null }] }],
+      },
+    });
+
+    expect(result).not.toBeNull();
+    expect(expectItinerary(result).days[0].blocks[0].source).toBeNull();
+  });
+
+  it("keeps the source reference of a block", () => {
+    const source = {
+      sourceName: "Catálogo de demostración",
+      sourceUrl: "https://example.com/catalogo",
+      verifiedAt: "2026-11-12",
+    };
+    const result = validateItineraryResponse({
+      itinerary: {
+        ...validItinerary,
+        days: [{ ...validDay, blocks: [{ ...validBlock, source }] }],
+      },
+    });
+
+    expect(expectItinerary(result).days[0].blocks[0].source).toEqual(source);
+  });
+
+  it.each([{}, "catálogo", 42, { sourceName: 7 }])(
+    "rejects a malformed block source (%s)",
+    (source) => {
+      const result = validateItineraryResponse({
+        itinerary: {
+          ...validItinerary,
+          days: [{ ...validDay, blocks: [{ ...validBlock, source }] }],
+        },
+      });
+
+      expect(result).toBeNull();
+    },
+  );
 });
 
 describe("unscheduled experiences", () => {

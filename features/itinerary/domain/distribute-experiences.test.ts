@@ -392,6 +392,7 @@ describe("distributeExperiences", () => {
       destinationId: "dest-attraction",
       estimatedDurationMinutes: 90,
       notes: "Salidas matutinas según temporada.",
+      source: null,
       confidence: "estimated",
     });
     expect(distribution.warnings).toEqual([]);
@@ -447,6 +448,7 @@ describe("distributeExperiences", () => {
       destinationId: "dest-attraction",
       estimatedDurationMinutes: null,
       notes: null,
+      source: null,
       confidence: "needs_verification",
     });
     expect(distribution.warnings).toEqual([
@@ -759,5 +761,60 @@ describe("distributeExperiences", () => {
         [],
       ),
     ).toThrow("at least one travel day");
+  });
+});
+
+describe("distributeExperiences source propagation", () => {
+  it("copies the source of a visit from its catalogue experience", () => {
+    const source = {
+      sourceName: "Catálogo de demostración",
+      sourceUrl: null,
+      verifiedAt: "2026-11-12",
+    };
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf([experience({ id: "exp-home-1", source })]),
+      catalogue,
+      [],
+    );
+
+    const [block] = dayOf(distribution, 1).blocks;
+    expect(block.kind).toBe("visit");
+    expect(block.source).toEqual(source);
+  });
+
+  it("copies the source of a transfer from the selected transport option", () => {
+    const source = {
+      sourceName: "Cooperativa de transporte",
+      sourceUrl: "https://example.com/horarios",
+      verifiedAt: "2026-10-30",
+    };
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [transportOption({ source })],
+    );
+
+    const blocks = dayOf(distribution, 1).blocks;
+    expect(blocks.map((block) => block.kind)).toEqual([
+      "visit",
+      "transfer",
+      "visit",
+    ]);
+    expect(blocks[1].source).toEqual(source);
+  });
+
+  it("leaves the transfer source empty when no catalogue option exists", () => {
+    const distribution = distributeExperiences(
+      preferences({ days: 1 }),
+      rankingOf(homeThenAttraction()),
+      catalogue,
+      [],
+    );
+
+    const transfer = dayOf(distribution, 1).blocks[1];
+    expect(transfer.kind).toBe("transfer");
+    expect(transfer.source).toBeNull();
   });
 });
