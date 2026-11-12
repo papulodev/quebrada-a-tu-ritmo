@@ -118,7 +118,10 @@ function ItinerarySection({
         </p>
       ) : null}
       <p className="text-sm text-base-content/70">{ITINERARY_DISCLAIMER}</p>
-      <ItinerarySummary itinerary={itinerary.itinerary} />
+      <ItinerarySummary
+        itinerary={itinerary.itinerary}
+        strategyName={chosen?.name ?? null}
+      />
       <button
         type="button"
         className="btn btn-ghost btn-sm self-start"
