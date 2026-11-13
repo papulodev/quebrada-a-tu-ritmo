@@ -58,8 +58,51 @@ interface ItinerarySectionProps {
 
 const BACK_LABEL = "Volver a las preferencias";
 const MODIFY_ANSWERS_LABEL = "Modificar respuestas";
+const COMPARISON_LOADING_MESSAGE = "Comparando estrategias…";
+const COMPARISON_READY_MESSAGE =
+  "Comparación lista. Elija una estrategia para generar su itinerario.";
+const ITINERARY_LOADING_MESSAGE = "Generando su itinerario…";
+const ITINERARY_READY_MESSAGE = "Su itinerario está listo.";
+const EMPTY_RESULTS_MESSAGE =
+  "No hay estrategias disponibles para estas preferencias.";
 const ITINERARY_DISCLAIMER =
   "El itinerario es una propuesta estimada a partir del catálogo; no confirma horarios ni disponibilidad de transporte. Revise las advertencias y confirme cada servicio antes de reservar.";
+
+// QTR-027: a single persistent live region reports every state change. It stays
+// mounted across idle/loading/error/ready because a region inserted already
+// filled in is not announced reliably, and `sr-only` keeps it out of the
+// layout so it adds no visual gap. The visible paragraphs below carry the same
+// text but no `role="status"`, so nothing is announced twice.
+function statusMessage(
+  state: ComparisonState,
+  itinerary: ItineraryState,
+): string {
+  if (state.status === "loading") {
+    return COMPARISON_LOADING_MESSAGE;
+  }
+
+  if (state.status !== "ready") {
+    return "";
+  }
+
+  if (state.strategies.length === 0) {
+    return EMPTY_RESULTS_MESSAGE;
+  }
+
+  if (itinerary.status === "loading") {
+    return ITINERARY_LOADING_MESSAGE;
+  }
+
+  if (itinerary.status === "ready") {
+    return ITINERARY_READY_MESSAGE;
+  }
+
+  if (itinerary.status === "error") {
+    return "";
+  }
+
+  return COMPARISON_READY_MESSAGE;
+}
 
 function ItinerarySection({
   itinerary,
@@ -75,8 +118,8 @@ function ItinerarySection({
     return (
       <section className="flex items-center gap-3 rounded-2xl border border-base-300 p-4">
         <span className="loading loading-spinner loading-sm" aria-hidden="true" />
-        <p role="status" className="text-sm text-base-content/70">
-          Generando su itinerario…
+        <p className="text-sm text-base-content/70">
+          {ITINERARY_LOADING_MESSAGE}
         </p>
       </section>
     );
@@ -142,111 +185,136 @@ export function StrategyComparison({
   onBack,
   onRetry,
 }: StrategyComparisonProps) {
+  const status = (
+    <p role="status" className="sr-only">
+      {statusMessage(state, itinerary)}
+    </p>
+  );
+
   if (state.status === "idle") {
-    return null;
+    return status;
   }
 
   if (state.status === "loading") {
     return (
-      <section className="flex items-center gap-3 rounded-2xl border border-base-300 p-4">
-        <span className="loading loading-spinner loading-sm" aria-hidden="true" />
-        <p role="status" className="text-sm text-base-content/70">
-          Comparando estrategias…
-        </p>
-      </section>
+      <>
+        {status}
+        <section className="flex items-center gap-3 rounded-2xl border border-base-300 p-4">
+          <span
+            className="loading loading-spinner loading-sm"
+            aria-hidden="true"
+          />
+          <p className="text-sm text-base-content/70">
+            {COMPARISON_LOADING_MESSAGE}
+          </p>
+        </section>
+      </>
     );
   }
 
   if (state.status === "error") {
     return (
-      <section className="flex flex-col gap-3 rounded-2xl border border-error/40 bg-error/5 p-4">
-        <h2 className="text-lg font-semibold">No se pudo comparar</h2>
-        <p role="alert" className="text-sm text-error">
-          {state.message}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={onRetry}
-          >
-            Reintentar
-          </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
-            {BACK_LABEL}
-          </button>
-        </div>
-      </section>
+      <>
+        {status}
+        <section className="flex flex-col gap-3 rounded-2xl border border-error/40 bg-error/5 p-4">
+          <h2 className="text-lg font-semibold">No se pudo comparar</h2>
+          <p role="alert" className="text-sm text-error">
+            {state.message}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={onRetry}
+            >
+              Reintentar
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={onBack}
+            >
+              {BACK_LABEL}
+            </button>
+          </div>
+        </section>
+      </>
     );
   }
 
   if (state.strategies.length === 0) {
     return (
-      <section className="flex flex-col gap-3 rounded-2xl border border-base-300 p-4">
-        <h2 className="text-lg font-semibold">Sin resultados</h2>
-        <p role="status" className="text-sm text-base-content/70">
-          No hay estrategias disponibles para estas preferencias.
-        </p>
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm self-start"
-          onClick={onBack}
-        >
-          {BACK_LABEL}
-        </button>
-      </section>
+      <>
+        {status}
+        <section className="flex flex-col gap-3 rounded-2xl border border-base-300 p-4">
+          <h2 className="text-lg font-semibold">Sin resultados</h2>
+          <p className="text-sm text-base-content/70">{EMPTY_RESULTS_MESSAGE}</p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm self-start"
+            onClick={onBack}
+          >
+            {BACK_LABEL}
+          </button>
+        </section>
+      </>
     );
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <fieldset className="flex flex-col gap-4">
-        <legend className="text-xl font-semibold tracking-tight">
-          Estrategias comparadas
-        </legend>
-        <p className="text-sm text-base-content/70">
-          Ordenadas por afinidad con sus preferencias. Los datos marcados como
-          «por confirmar» no están verificados: confirme horarios y
-          disponibilidad antes de reservar.
-        </p>
-        <p className="text-sm text-base-content/70">
-          Elija una estrategia para generar su itinerario.
-        </p>
-        <div className="grid gap-4 xl:grid-cols-2">
-          {state.strategies.map((strategy) => (
-            <StrategyCard
-              key={strategy.id}
-              strategy={strategy}
-              name="strategy"
-              checked={selectedStrategyId === strategy.id}
-              onSelect={() => {
-                if (isStrategyId(strategy.id)) {
-                  onSelectStrategy(strategy.id);
-                }
-              }}
-            />
-          ))}
+    <>
+      {status}
+      <section className="flex flex-col gap-4">
+        <fieldset className="flex flex-col gap-4">
+          <legend className="text-xl font-semibold tracking-tight">
+            Estrategias comparadas
+          </legend>
+          <p className="text-sm text-base-content/70">
+            Ordenadas por afinidad con sus preferencias. Los datos marcados como
+            «por confirmar» no están verificados: confirme horarios y
+            disponibilidad antes de reservar.
+          </p>
+          <p className="text-sm text-base-content/70">
+            Elija una estrategia para generar su itinerario.
+          </p>
+          <div className="grid gap-4 xl:grid-cols-2">
+            {state.strategies.map((strategy) => (
+              <StrategyCard
+                key={strategy.id}
+                strategy={strategy}
+                name="strategy"
+                checked={selectedStrategyId === strategy.id}
+                onSelect={() => {
+                  if (isStrategyId(strategy.id)) {
+                    onSelectStrategy(strategy.id);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        </fieldset>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={
+              selectedStrategyId === null || itinerary.status === "loading"
+            }
+            onClick={onGenerate}
+          >
+            Generar itinerario
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
+            {BACK_LABEL}
+          </button>
         </div>
-      </fieldset>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          disabled={selectedStrategyId === null || itinerary.status === "loading"}
-          onClick={onGenerate}
-        >
-          Generar itinerario
-        </button>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
-          {BACK_LABEL}
-        </button>
-      </div>
-      <ItinerarySection
-        itinerary={itinerary}
-        strategies={state.strategies}
-        onGenerate={onGenerate}
-        onBack={onBack}
-      />
-    </section>
+        <ItinerarySection
+          itinerary={itinerary}
+          strategies={state.strategies}
+          onGenerate={onGenerate}
+          onBack={onBack}
+        />
+      </section>
+    </>
   );
 }

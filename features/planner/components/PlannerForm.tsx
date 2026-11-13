@@ -848,11 +848,12 @@ export function PlannerForm() {
         onRetry={handleRetry}
       />
 
+      <p role="status" className="sr-only">
+        {validated ? "Preferencias validadas." : ""}
+      </p>
+
       {validated ? (
-        <section
-          aria-live="polite"
-          className="flex flex-col gap-3 rounded-2xl border border-success/40 bg-success/5 p-4"
-        >
+        <section className="flex flex-col gap-3 rounded-2xl border border-success/40 bg-success/5 p-4">
           <h2 className="text-lg font-semibold">Preferencias validadas</h2>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <SummaryItem label="Días" value={String(validated.days)} />
