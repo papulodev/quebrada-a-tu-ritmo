@@ -5,6 +5,9 @@ test("home renders the product identity", async ({ page }) => {
 
   await expect(page).toHaveTitle(/Quebrada a tu ritmo/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Quebrada a tu ritmo" }),
+    page.getByRole("heading", {
+      level: 1,
+      name: "Planifique la Quebrada a su ritmo",
+    }),
   ).toBeVisible();
 });
