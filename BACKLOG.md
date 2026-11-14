@@ -399,10 +399,12 @@ Verificado el 2026-11-13: `tests/planner-flow.spec.ts` recorre el camino crític
 - **Depende de:** QTR-024
 - **Resultado:** datos visibles revisados antes de publicar la demo.
 - **Criterios de aceptación:**
-  - [ ] Cada afirmación logística sensible fue verificada o marcada como pendiente.
-  - [ ] Se comprueban enlaces de fuente.
-  - [ ] Se eliminan fixtures engañosos y mensajes de desarrollo de la UI pública.
-  - [ ] Se anota cuándo se realizó la revisión.
+  - [X] Cada afirmación logística sensible fue verificada o marcada como pendiente.
+  - [X] Se comprueban enlaces de fuente.
+  - [X] Se eliminan fixtures engañosos y mensajes de desarrollo de la UI pública.
+  - [X] Se anota cuándo se realizó la revisión.
+
+Verificado el 2026-11-13: el catálogo que alimenta la demo queda en 11 destinos, 15 experiencias y 5 opciones de transporte, versionado en el repositorio como módulos curados (`features/catalog/domain/destinations.ts`, `experiences.ts` y el nuevo `transport-options.ts`) que `scripts/db-seed.mjs` siembra en Neon, de modo que lo revisado es exactamente lo que carga la base: `catalog-repository.ts` lee solo de PostgreSQL y no tiene fallback a las constantes, así que la revisión no puede quedar desalineada en silencio. Cada afirmación logística sensible expone su estado con el campo `confidence`: los datos confirmados por una fuente quedan en `verified`, las duraciones de referencia en `estimated` y lo que no se pudo confirmar en `needs_verification`, y la presentación ya traduce esos estados a los badges "Dato verificado" / "Dato estimado" / "Datos por confirmar" sin promover una estimación a hecho. Los cinco corredores del Tren Solar (`tr-maimara-tilcara`, `tr-posta-hornillos-maimara`, `tr-purmamarca-maimara`, `tr-maimara-purmamarca`, `tr-tilcara-purmamarca`) son deliberadamente mixtos: el corredor está confirmado por el operador —por eso son `verified`— mientras que duración y tarifa quedan en `null`, nunca en `0`, con `scheduleNotes` que remite a la verificación oficial para la fecha elegida, y esa distinción es la que la UI muestra al señalar el dato faltante en lugar de inventarlo. Se eliminó un fixture engañoso: la experiencia `exp-posta-hornillos-museo` ("Museo y capilla de la Posta de Hornillos", `estimated`, fuente de la Secretaría de Turismo de Jujuy) duplicaba el sitio ya cubierto por `exp-posta-hornillos` (`verified`) y no existía en la base, así que se borró y quedó una sola entrada por lugar; con eso el reparto equilibrado pasa a agendar 9 experiencias y a dejar 6 afuera con su motivo explícito, y la aserción de conteo de `distribute-experiences.test.ts` se ajustó a 6 para que ninguna experiencia desaparezca en silencio. Los enlaces de fuente se comprobaron uno por uno con `curl -s -o /dev/null -w '%{http_code}' -L --max-time 20`: los 10 devolvieron 200, entre ellos los de la Comisión de Filmaciones de Jujuy, la Facultad de Filosofía y Letras (UBA) para Tilcara, `trensolar.com.ar`, la Secretaría de Turismo de Jujuy y los cinco PDF de catálogos y manuales; los `sourceUrl` quedan como referencia y no se renderizan como texto en la UI. La UI pública no contiene mensajes de desarrollo: un barrido de `TODO`, `FIXME`, `XXX`, `HACK`, `Lorem`, `mock`, `fixture`, `coming soon`, `próximamente`, `WIP`, `dummy` y equivalentes sobre todos los `*.tsx` de `app/` y `features/` no encontró coincidencias, "Catálogo de demostración" aparece solo en archivos `.test`, y no hay condicionales por `NODE_ENV`, `process.env`, `isDev` ni `devOnly` en código de UI; los dos casos que parecían sospechosos se descartaron por inspección: `console.error(error)` en `PlannerForm.tsx:480` es la rama de fallo de red que además muestra un mensaje al usuario, y "Duración por confirmar" (`ItineraryBlockItem.tsx:34`) es copy de producto para un dato estimado, no un placeholder. Cierre de verificaciones: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test` (218 pruebas) y `pnpm run build` pasan. Observación fuera de alcance, no corregida: `PlannerForm.tsx` es un client component e importa `DESTINATIONS` para armar los selects de origen y alojamiento, con lo que el catálogo curado viaja al navegador en lugar de recibirse del servidor; conviene revisarlo en un ticket aparte.
 
 ### QTR-030 — Preparar deployment y checklist de entrega
 
@@ -410,12 +412,22 @@ Verificado el 2026-11-13: `tests/planner-flow.spec.ts` recorre el camino crític
 - **Depende de:** QTR-002, QTR-003, QTR-009, QTR-023, QTR-028, QTR-029
 - **Resultado:** demo pública y checklist de presentación.
 - **Criterios de aceptación:**
-  - [ ] Build de producción pasa.
+  - [X] Build de producción pasa.
   - [ ] La demo funciona sin configuración local especial ni secretos expuestos.
-  - [ ] Se documenta configuración de DB y variables necesarias para deploy.
+  - [X] Se documenta configuración de DB y variables necesarias para deploy.
   - [ ] El repositorio queda público si así lo exige la hackatón.
   - [ ] Se prepara un guion/video de hasta 3 minutos si ese requisito sigue vigente en las bases.
-  - [ ] Se registran las métricas reales recogidas con usuarios, o se declara explícitamente que aún no hay datos.
+  - [X] Se registran las métricas reales recogidas con usuarios, o se declara explícitamente que aún no hay datos.
+
+Estado al 2026-11-14: `pnpm run build` pasa sin variables de entorno y la
+configuración de deploy quedó documentada en la sección "Despliegue" de
+`README.md` (variables en Vercel, migraciones y seed como pasos explícitos fuera
+del build, y reglas para no exponer credenciales). Todavía no se registraron
+métricas de usuarios: no se realizaron entrevistas ni sesiones de prueba con
+personas fuera del equipo, así que no hay datos que reportar. Queda pendiente,
+por requerir acciones fuera del repositorio: desplegar en Vercel, verificar la
+URL pública con el catálogo cargado, decidir la visibilidad del repositorio según
+las bases de la hackatón y, si el requisito sigue vigente, grabar el video.
 
 ---
 
