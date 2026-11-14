@@ -4,12 +4,17 @@
 // estimated duration and data confidence. Unknown durations are never shown
 // as zero: they surface as an explicit pending note (FR-14), and confidence
 // is always written out so it does not depend on colour alone (NFR-02).
+// Provenance is rendered on every block (FR-19): source and verification date
+// when recorded, an explicit note when no source is registered. The
+// itinerary-level unverified warning lives in the summary, not here, so it is
+// not repeated on every block.
 
 import type { ItineraryBlock } from "../../planner/domain/types";
 
 import {
   BLOCK_KIND_LABELS,
   CONFIDENCE_BADGES,
+  describeSource,
   formatDuration,
 } from "../domain/presentation";
 
@@ -31,6 +36,9 @@ export function ItineraryBlockItem({ block }: { block: ItineraryBlock }) {
         <span className={`badge badge-sm ${confidenceBadge.className}`}>
           {confidenceBadge.label}
         </span>
+      </p>
+      <p className="text-sm text-base-content/70">
+        {describeSource(block.source)}
       </p>
       {block.notes !== null ? (
         <p className="text-sm text-base-content/70">{block.notes}</p>

@@ -10,7 +10,10 @@ import type {
   Interest,
   TransportMode,
 } from "../../catalog/domain/types";
-import type { ConfidenceStatus } from "../../catalog/domain/confidence";
+import type {
+  ConfidenceStatus,
+  SourceReference,
+} from "../../catalog/domain/confidence";
 import type { UnscheduledExperience } from "../../itinerary/domain/distribute-experiences";
 import type { StrategyId } from "./select-strategies";
 
@@ -101,6 +104,11 @@ export interface ItineraryBlock {
   estimatedDurationMinutes: number | null;
   /** Transfer or logistics notes, when data exists. */
   notes: string | null;
+  /**
+   * Where the block data came from (FR-19). `null` means no source is
+   * recorded, which must be shown as pending, never as verified.
+   */
+  source: SourceReference | null;
   confidence: ConfidenceStatus;
 }
 

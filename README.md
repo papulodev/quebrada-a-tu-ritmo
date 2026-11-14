@@ -83,7 +83,7 @@ los tests end-to-end se corren localmente.
 | `build` | pasa sin variables de entorno |
 | `db:migrate` | pasa en local contra PostgreSQL 18 en Docker (base vacía, segunda ejecución sin cambios y detección de drift) |
 | consultas de catálogo | verificadas en local contra PostgreSQL 18 en Docker (mapeo, `nulls` y entrada tratada como valor); mappers y error de configuración cubiertos por tests |
-| `db:seed` | pasa en local contra PostgreSQL 18 en Docker (dos ejecuciones seguidas dejan 4 destinos y 6 experiencias, sin duplicados) |
+| `db:seed` | pasa en local contra PostgreSQL 18 en Docker (dos ejecuciones seguidas dejan 11 destinos, 15 experiencias y 5 corredores de transporte, sin duplicados) |
 
 ## Base de datos
 
@@ -126,14 +126,17 @@ pnpm run db:migrate   # primero, para crear las tablas
 pnpm run db:seed      # carga los catálogos curados
 ```
 
-`scripts/db-seed.mjs` importa `features/catalog/domain/destinations.ts` y
-`features/catalog/domain/experiences.ts`, así que el seed no duplica datos: la
-misma fuente alimenta la UI y la base. Es repetible porque cada fila se inserta
-con `ON CONFLICT (id) DO UPDATE`; nunca borra filas que no estén en los
-catálogos. Los valores desconocidos (duración, precio, coordenadas, fuente) se
-guardan como `NULL` y todo queda en `needs_verification` hasta que alguien lo
-verifique contra una fuente primaria. `transport_options` queda vacía: todavía
-no hay un catálogo de transporte verificado.
+`scripts/db-seed.mjs` importa `features/catalog/domain/destinations.ts`,
+`features/catalog/domain/experiences.ts` y
+`features/catalog/domain/transport-options.ts`, así que el seed no duplica
+datos: la misma fuente alimenta la UI y la base. Es repetible porque cada fila
+se inserta con `ON CONFLICT (id) DO UPDATE`; nunca borra filas que no estén en
+los catálogos. Los valores desconocidos (duración, precio, coordenadas, fuente)
+se guardan como `NULL`, nunca como `0`, y cada registro conserva su
+`confidence` (`verified` o `estimated`) según haya sido contrastado contra una
+fuente primaria. Los corredores de `transport_options` se siembran como
+`verified` —el trazado existe— con duración y precio en `NULL`, porque todavía
+no hay dato confirmado para esos campos.
 
 ### Consultas de catálogo
 
@@ -153,6 +156,44 @@ no hay un catálogo de transporte verificado.
   `MissingEnvironmentVariableError` con un mensaje que nombra la variable y
   nunca incluye su valor ni otros secretos.
 
+### Despliegue
+
+El destino previsto es Vercel con Postgres de Neon. La aplicación no necesita
+variables de entorno en build: las resuelve en tiempo de request, así que el
+build puede ejecutarse antes de configurar la base.
+
+| Paso | Acción | Resultado esperado |
+| --- | --- | --- |
+| 1 | Aplicar la configuración de `neon.ts` con `neon deploy` sobre el proyecto de Neon. | La rama existe con las variables declaradas. |
+| 2 | Importar el repositorio en Vercel y usar `pnpm run build` como build command. Vercel detecta pnpm por `packageManager` y `pnpm-lock.yaml`. | El build termina sin variables de entorno. |
+| 3 | Declarar `DATABASE_URL` (conexión agrupada) en el entorno de producción de Vercel. | La app deja de fallar con `MissingEnvironmentVariableError`. |
+| 4 | Cargar schema y datos de demo en la base de producción (ver abajo). | `/` y `/planner` muestran destinos y experiencias. |
+
+Migraciones y seed no forman parte del build: son pasos explícitos. Sin ellos, la
+demo responde pero el catálogo queda vacío.
+
+```bash
+# con las URLs de la rama de producción disponibles localmente
+pnpm run db:migrate
+pnpm run db:seed
+```
+
+Ambos comandos son seguros de repetir: las migraciones se aplican una sola vez y
+el seed usa `ON CONFLICT (id) DO UPDATE`. Si se ejecutan desde una máquina local,
+conviene `DATABASE_URL_UNPOOLED` (conexión directa) en lugar de la agrupada.
+
+`DATABASE_URL_UNPOOLED` no la lee la aplicación en runtime: solo la usan
+`db:migrate` y `db:seed`. Por eso alcanza con declararla donde se ejecutan esos
+comandos, no en Vercel.
+
+Reglas:
+
+- Nunca commitear `.env` ni `.env.local`: las credenciales se cargan en el
+  entorno de Vercel o con `neon deploy --env-pull`.
+- No exponer la cadena de conexión con prefijo `NEXT_PUBLIC_`.
+- `lib/db.ts` limita el pool a 5 conexiones y libera sockets inactivos con
+  `attachDatabasePool` de `@vercel/functions` (no-op fuera de Vercel).
+
 ## Estructura
 
 ```text
@@ -163,5 +204,5 @@ scripts/      utilidades de mantenimiento
 tests/        pruebas end-to-end
 ```
 
-La organización por funcionalidad bajo `src/features/` descripta en `AGENTS.md`
-se adopta cuando exista código de producto para ella.
+La organización por funcionalidad bajo `features/` agrupa el código de producto
+en `catalog/`, `itinerary/` y `planner/`.

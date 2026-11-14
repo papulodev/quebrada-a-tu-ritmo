@@ -115,6 +115,7 @@ function visitBlock(experience: Experience): ItineraryBlock {
     // Unknown duration is preserved as-is; it is never replaced with 0.
     estimatedDurationMinutes: experience.estimatedDurationMinutes,
     notes: null,
+    source: experience.source,
     confidence: experience.confidence,
   };
 }
@@ -170,6 +171,7 @@ function transferBlock(
     destinationId: arrivalDestinationId,
     estimatedDurationMinutes,
     notes: option?.scheduleNotes ?? null,
+    source: option?.source ?? null,
     confidence,
   };
 }

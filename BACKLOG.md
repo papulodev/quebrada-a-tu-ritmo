@@ -336,10 +336,12 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-006, QTR-007, QTR-019
 - **Resultado:** los datos logísticos exhiben estado de confianza y procedencia.
 - **Criterios de aceptación:**
-  - [ ] Los datos verificados muestran fuente y fecha cuando existan.
-  - [ ] Los datos estimados se rotulan explícitamente.
-  - [ ] Los datos pendientes muestran un aviso claro.
-  - [ ] No aparece contenido de prueba como dato oficial.
+  - [X] Los datos verificados muestran fuente y fecha cuando existan.
+  - [X] Los datos estimados se rotulan explícitamente.
+  - [X] Los datos pendientes muestran un aviso claro.
+  - [X] No aparece contenido de prueba como dato oficial.
+
+Verificado el 2026-11-12: la procedencia y el estado de confianza llegan hasta la UI sin inventar datos. `ItineraryBlock` (en `features/planner/domain/types.ts`) incorpora el campo aditivo `source: SourceReference | null` antes de `confidence`, reutilizando el tipo `SourceReference` del catálogo (`sourceName`, `sourceUrl`, `verifiedAt`) en lugar de duplicarlo (FR-19). El motor puro lo propaga en `features/itinerary/domain/distribute-experiences.ts`: los bloques `visit` copian `experience.source` y los bloques `transfer` usan `option?.source ?? null`, de modo que un traslado sin opciones de transporte queda con `source: null` en vez de atribuirse una fuente inexistente. `isItineraryBlock` (`features/planner/domain/validate-itinerary-response.ts`) valida ese campo en runtime —acepta `null` o un `SourceReference` completo mediante `isSourceReference`— antes de comprobar `confidence`, así que una respuesta con procedencia malformada se descarta igual que una con un estado de confianza inválido. En presentación, `features/itinerary/domain/presentation.ts` agrega `formatVerificationDate`, que convierte `YYYY-MM-DD` a `DD/MM/YYYY` a partir de sus partes (sin `Date`, para evitar el corrimiento de día por zona horaria) y devuelve `null` ante fechas malformadas o imposibles; `describeSource`, que muestra "Sin fuente registrada" cuando no hay fuente, "Fuente: <nombre> · Verificado el <fecha>" cuando existe la fecha y "Fuente: <nombre> · Fecha de verificación no registrada" cuando falta o es inválida, sin exponer nunca `sourceUrl` como texto; y `hasUnverifiedBlocks`, que detecta si algún bloque del itinerario sigue en `needs_verification`. `ItineraryBlockItem` muestra el resultado de `describeSource` bajo el badge de confianza (`CONFIDENCE_BADGES`: "Dato verificado" / "Dato estimado" / "Datos por confirmar"), `ItineraryOptionalList` hace lo mismo con cada experiencia no agendada, y `ItinerarySummary` renderiza una sola vez `UNVERIFIED_DATA_NOTICE` ("Este itinerario incluye datos que todavía no están verificados. Conviene confirmar horarios y disponibilidad antes de viajar.") al inicio del resumen, condicionado por `hasUnverifiedBlocks`; el aviso por bloque se descartó porque se repetía en cada actividad y duplicaba el badge. Los avisos no dependen solo del color: tanto el badge como el aviso son texto. Sobre el criterio de no mostrar contenido de prueba como dato oficial: ninguna entrada de `destinations.ts` ni `experiences.ts` declara fuente, todas quedan en `needs_verification` y eso está fijado por `destinations.test.ts` y `experiences.test.ts`, por lo que la UI las rotula como pendientes en lugar de presentarlas como verificadas. Pruebas: `distribute-experiences.test.ts` cubre la propagación (visita, traslado con opción y traslado sin opción), `validate-itinerary-response.test.ts` acepta `null`, un `SourceReference` completo y rechaza fuentes malformadas, `presentation.test.ts` cubre `formatVerificationDate`, `describeSource`, `hasUnverifiedBlocks` y el texto del aviso, y los fixtures de `build-rationale.test.ts` y `types.test.ts` se actualizaron con `source: null`. `pnpm lint`, `pnpm run typecheck`, `pnpm run test` (17 archivos, 204 pruebas) y `pnpm run build` pasan.
 
 ### QTR-025 — Implementar resumen copiable
 
@@ -347,9 +349,11 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-023
 - **Resultado:** el usuario puede copiar un resumen legible del itinerario.
 - **Criterios de aceptación:**
-  - [ ] El texto incluye días, principales actividades y advertencias relevantes.
-  - [ ] La UI indica éxito/error de copiado.
-  - [ ] El resumen no transforma estimaciones en hechos confirmados.
+  - [X] El texto incluye días, principales actividades y advertencias relevantes.
+  - [X] La UI indica éxito/error de copiado.
+  - [X] El resumen no transforma estimaciones en hechos confirmados.
+
+Verificado el 2026-11-12: el resumen copiable se arma en `features/itinerary/domain/build-summary-text.ts`, una función pura que no toca React, el DOM ni la red. `buildSummaryText(itinerary, options)` recibe `SummaryTextOptions.strategyName` opcional y devuelve un único string con el título `Resumen del itinerario — Quebrada a tu ritmo`, la línea `Estrategia: <nombre>` cuando el nombre existe y no está vacío (se recorta con `trim()` y se omite si queda en blanco), y un bloque por día con `Día N` o `Día N — <categoría>` según `DESTINATION_CATEGORY_LABELS`; un día sin bloques dice explícitamente `Sin actividades asignadas este día.` en lugar de quedar vacío. Cada actividad se escribe como `- <tipo>: <título> · <duración> · <estado de confianza>`, reutilizando `BLOCK_KIND_LABELS`, `CONFIDENCE_BADGES` y `formatDuration` de `presentation.ts`: un `estimatedDurationMinutes` nulo se traduce a `duración por confirmar` y nunca a `0 min`, y cada línea lleva su badge (`Dato verificado` / `Dato estimado` / `Datos por confirmar`), de modo que una estimación no puede leerse como un hecho. Después aparecen `Actividades opcionales` (cada una con su motivo de descarte) y `Advertencias`, estas últimas filtradas con `filterUnscheduledReasons` para no repetir un motivo ya escrito junto a su actividad. El texto cierra con `UNVERIFIED_DATA_NOTICE` si `hasUnverifiedBlocks(itinerary)` detecta datos pendientes, o con `ESTIMATE_ONLY_NOTICE` en caso contrario; ambos avisos aclaran que las duraciones son estimaciones y que no se confirman horarios ni disponibilidad de transporte. `build-summary-text.test.ts` cubre con catorce casos el título, la línea de estrategia presente y ausente (`null`, `undefined`, cadena vacía y sólo espacios), los encabezados de día, el formato de cada actividad, la duración desconocida como `duración por confirmar`, el día vacío, las actividades opcionales, la deduplicación de advertencias y los dos avisos de cierre. En la UI, `features/itinerary/components/ItineraryCopyButton.tsx` es la única pieza cliente del árbol del itinerario: usa `navigator.clipboard.writeText(text)` dentro de `try/catch` y reporta el resultado con un estado `CopyStatus` (`idle | copied | error`) mapeado a `FEEDBACK`. La región `<p role="status">` queda siempre montada y sólo cambia su texto —con `sr-only` cuando no hay nada que anunciar— porque una región viva creada en el mismo momento en que recibe contenido no se anuncia de forma confiable; el éxito muestra `Resumen copiado.` y el error pide copiar el texto manualmente, sin depender de temporizadores ni de un toast. `ItinerarySummary` calcula `summaryText` y monta `<ItineraryCopyButton key={summaryText} …>` como primer hijo de la sección, así que un itinerario nuevo remonta el botón y limpia el mensaje anterior en lugar de dejar un "copiado" obsoleto; además acepta `strategyName` y `StrategyComparison` le pasa `chosen?.name ?? null` para que el texto copiado identifique la estrategia elegida. `pnpm run lint`, `pnpm run typecheck`, `pnpm run test` (18 archivos, 218 tests) y `pnpm run build` pasan.
 
 ### QTR-026 — Pulir landing y narrativa del producto
 
@@ -357,10 +361,12 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-001, QTR-023
 - **Resultado:** una landing explica el problema, el beneficio y el CTA principal.
 - **Criterios de aceptación:**
-  - [ ] La propuesta se entiende sin leer documentación.
-  - [ ] El CTA lleva al planificador.
-  - [ ] No hay testimonios ni métricas inventadas.
-  - [ ] Diseño responsive y links funcionales.
+  - [X] La propuesta se entiende sin leer documentación.
+  - [X] El CTA lleva al planificador.
+  - [X] No hay testimonios ni métricas inventadas.
+  - [X] Diseño responsive y links funcionales.
+
+Verificado el 2026-11-12: `app/page.tsx` deja de ser un título con un párrafo y pasa a ser una landing narrativa de server component (sin `"use client"`), armada con tokens de daisyUI y contenido derivado solo del producto real. La apertura presenta el badge `Quebrada de Humahuaca`, el título `Planifique la Quebrada a su ritmo`, el problema en una línea (días, traslados y altura) y dos acciones: la CTA primaria `btn btn-primary` con el texto exacto `Planificar mi viaje` que enlaza a `/planner` (flujo del paso 1 del spec) y un ancla secundaria `link link-hover` a `#como-funciona`; debajo, una microcopy aclara que es gratis, sin cuenta y que cada dato muestra su estado de verificación. La sección siguiente explica por qué la planificación es difícil enumerando las decisiones reales del formulario (días por pueblo, auto, tiempo de traslado, qué dejar afuera, ritmo de cada jornada) en una grilla de tarjetas `rounded-2xl border border-base-300`; no se afirma ninguna cifra de duración ni de distancia. `Cómo funciona` usa un `ol` de tres pasos —contar el viaje (origen, días, movilidad, presupuesto, ritmo e intereses), comparar estrategias y recibir el itinerario por día con duraciones estimadas, advertencias y actividades descartadas con su motivo— y nombra las cuatro estrategias existentes en `select-strategies.ts` (`Excursiones desde Salta`, `Base en la Quebrada`, `Recorrido con movilidad propia o combinada` y `Tren Solar`) sin describir horarios ni disponibilidad. `Datos con su estado a la vista` importa `CONFIDENCE_BADGES` desde `features/itinerary/domain/presentation.ts` para renderizar los tres badges reales (`Dato verificado`, `Dato estimado`, `Datos por confirmar`) en lugar de duplicar etiquetas, y aclara que las duraciones son estimaciones de referencia, que no se confirman horarios, frecuencias ni disponibilidad de transporte, que no se gestionan reservas y que los avisos de altura son generales y no reemplazan consejo médico. `Pensado para distintos viajes` lista los perfiles objetivo del spec (quien llega desde Salta, familias y grupos de dos o tres días, quien viaja con auto, quien busca cultura, paisaje y gastronomía, quien llega del exterior y quien quiere usar el Tren Solar) y cierra con una segunda CTA `Planificar mi viaje` con la nota de que no requiere cuenta ni datos de contacto. La página no incluye testimonios, reseñas, métricas de uso, logos ni fuentes citadas: todo el catálogo sigue en `needs_verification` y la landing lo dice de forma explícita. El layout es mobile-first con `max-w-4xl`, CTAs apiladas en pantallas angostas, grillas `sm:grid-cols-2` y `md:grid-cols-3` y sin `bg-base-200` para no competir con el `--background` que fija `app/globals.css`; los únicos enlaces son la ruta existente `/planner` y el ancla interna `#como-funciona`, ambos funcionales. No se sobrescribe el `title` de `app/layout.tsx` (la landing solo declara `description`) para no duplicar metadata. Verificado con `pnpm run lint`, `pnpm run typecheck`, `pnpm run test` (18 archivos, 218 tests) y `pnpm run build`, que prerenderiza `/` como contenido estático junto a `/planner`.
 
 ### QTR-027 — Verificar accesibilidad y responsive del flujo principal
 
@@ -368,10 +374,12 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-015, QTR-016, QTR-022, QTR-026
 - **Resultado:** el flujo se puede utilizar en móvil y teclado.
 - **Criterios de aceptación:**
-  - [ ] No hay scroll horizontal accidental a 360 px.
-  - [ ] Inputs tienen etiquetas; errores están asociados a sus campos.
-  - [ ] Foco visible y orden de tabulación coherente.
-  - [ ] Los mensajes no dependen solo del color.
+  - [X] No hay scroll horizontal accidental a 360 px.
+  - [X] Inputs tienen etiquetas; errores están asociados a sus campos.
+  - [X] Foco visible y orden de tabulación coherente.
+  - [X] Los mensajes no dependen solo del color.
+
+Verificado el 2026-11-12: el scroll horizontal se cubre con una prueba automatizada en lugar de una revisión manual. `tests/planner-responsive.spec.ts` corre Chromium a 360×740 —el ancho móvil de referencia del ticket— y mide `document.documentElement.scrollWidth - document.documentElement.clientWidth` dos veces: al cargar `/planner` y después de comparar estrategias, exigiendo que la diferencia sea menor a 1 px. Medir sobre `documentElement` evita el falso positivo de la barra de scroll vertical, que queda excluida de ambos valores. Las etiquetas y la asociación de errores ya estaban resueltas y se verificaron: días y origen usan `<label htmlFor>`, mientras que los radios y checkboxes de movilidad, alojamiento, intereses y ritmo quedan envueltos por su `<label>`; cada grupo marca `aria-invalid` y `aria-describedby` apuntando al `id` del error o del hint (`PlannerForm.tsx:221`, `:625-626`, `:640-656`, `:681-682`, `:722-723`, `:748-749`, `:807-808`), y `focusFirstIssue` lleva el foco al primer campo inválido en el orden de `FOCUS_ORDER`. El foco visible no se elimina en ninguna regla y los controles personalizados lo refuerzan con `has-[:focus-visible]:ring-2` (`PlannerForm.tsx:233`, `:647`, `StrategyCard.tsx:70`), de modo que el indicador no depende del outline por defecto del navegador; el orden de tabulación sigue el DOM. Los avisos no se distinguen solo por color: los errores son `role="alert"` con texto, los badges de confianza y los avisos de datos sin verificar son texto, y el estado de la comparación se anuncia por texto. Se corrigieron dos huecos de anuncio: `PlannerForm.tsx:851-853` agrega un `<p role="status" className="sr-only">` persistente que anuncia "Preferencias validadas." al confirmar el formulario, y `StrategyComparison.tsx` mantiene una única región `role="status"` montada en las cuatro ramas (`idle`, `loading`, `error`, `ready`) con el texto derivado de `statusMessage(state, itinerary)`, porque una región que se inserta junto con su texto no se anuncia de forma confiable. También se actualizó `tests/home.spec.ts` para esperar el `<h1>` "Planifique la Quebrada a su ritmo" que introdujo la landing de QTR-026. `pnpm run lint`, `pnpm run typecheck` y `pnpm run test` (18 archivos, 218 pruebas) pasan, `pnpm run build` compila dentro del `webServer` de Playwright y `pnpm run test:e2e` deja 2 pruebas en verde. Hallazgos fuera de alcance, no corregidos: el tema `corporate` declara `prefersdark`, así que un sistema en modo oscuro recibe un tema oscuro que el producto no diseñó; `body { font-family: Arial }` en `app/globals.css` pisa la fuente Geist; `text-base-content/70` queda en ~5,7:1, suficiente para texto normal pero ajustado; y no hay skip link, que el ticket no exige y el flujo no necesita con un solo `h1` y una navegación corta.
 
 ### QTR-028 — Agregar E2E del recorrido principal
 
@@ -379,9 +387,11 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-023, QTR-027
 - **Resultado:** una prueba automatizada cubre landing → preferencias → estrategia → itinerario.
 - **Criterios de aceptación:**
-  - [ ] Se ejecuta con `pnpm run test:e2e`.
-  - [ ] Usa datos deterministas y no depende de servicios externos reales.
-  - [ ] Comprueba que se presenta un itinerario y las advertencias pertinentes.
+  - [X] Se ejecuta con `pnpm run test:e2e`.
+  - [X] Usa datos deterministas y no depende de servicios externos reales.
+  - [X] Comprueba que se presenta un itinerario y las advertencias pertinentes.
+
+Verificado el 2026-11-13: `tests/planner-flow.spec.ts` recorre el camino crítico completo en una sola prueba de Chromium, sin base de datos ni servicios externos. Intercepta `POST /api/itineraries` con `page.route("**/api/itineraries")` y responde siempre el mismo cuerpo desde `tests/fixtures/base-en-la-quebrada-itinerary.ts`, un `Itinerary` derivado de una respuesta real 200 de la estrategia `base-en-la-quebrada` (3 días con 5, 5 y 0 bloques, `unscheduled: []` y 6 advertencias). Se intercepta ese endpoint y no `/api/compare` porque el primero depende de PostgreSQL a través de `features/catalog/services/catalog-repository.ts` (`import "server-only"` + `getPool()`), mientras que la comparación es determinista y no toca la base. La prueba parte de `/`, comprueba el `<h1>` "Planifique la Quebrada a su ritmo" y usa la primera CTA "Planificar mi viaje" (el texto aparece dos veces en la landing); en `/planner` verifica el `<h1>` del formulario, marca solo el interés "Paisaje" —los valores por defecto ya son tres días, origen Salta, sin auto, presupuesto medio, ritmo equilibrado y sin alojamiento resuelto— y envía "Comparar estrategias". En el grupo "Estrategias comparadas" selecciona el radio "Base en la Quebrada" con `check({ force: true })` porque el input es `sr-only` y queda cubierto por el label superpuesto de `StrategyCard`, y pulsa "Generar itinerario". El tramo final comprueba que se presenta un itinerario real: `h2` "Su itinerario", el texto "Estrategia elegida: Base en la Quebrada.", `h2` "Plan por día", el `h3` que empieza con "Día 1" y, dentro de la región de ese día, el bloque "Cerro de los Siete Colores" y "Duración por confirmar"; también "Sin actividades asignadas este día." para el tercer día y los avisos `UNVERIFIED_DATA_NOTICE` más la sección "Advertencias" con "Quedaron días del viaje sin actividades asignadas.", mientras "Actividades opcionales" no aparece porque `unscheduled` está vacío. El payload se valida además con `validateItineraryResponse({ itinerary })`, de modo que el fixture no puede quedar desalineado del contrato sin romper la prueba, y el `requestBody` capturado por la ruta se compara con `{ strategyId: "base-en-la-quebrada" }` para confirmar que el navegador envió la estrategia elegida. `pnpm run test:e2e` pasa con 3 pruebas (home, responsive y este recorrido); `pnpm run lint`, `pnpm run typecheck` y `pnpm run test` (18 archivos, 218 pruebas) siguen en verde.
 
 ### QTR-029 — Revisar catálogo y preparar datos para la demo
 
@@ -389,10 +399,12 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-024
 - **Resultado:** datos visibles revisados antes de publicar la demo.
 - **Criterios de aceptación:**
-  - [ ] Cada afirmación logística sensible fue verificada o marcada como pendiente.
-  - [ ] Se comprueban enlaces de fuente.
-  - [ ] Se eliminan fixtures engañosos y mensajes de desarrollo de la UI pública.
-  - [ ] Se anota cuándo se realizó la revisión.
+  - [X] Cada afirmación logística sensible fue verificada o marcada como pendiente.
+  - [X] Se comprueban enlaces de fuente.
+  - [X] Se eliminan fixtures engañosos y mensajes de desarrollo de la UI pública.
+  - [X] Se anota cuándo se realizó la revisión.
+
+Verificado el 2026-11-13: el catálogo que alimenta la demo queda en 11 destinos, 15 experiencias y 5 opciones de transporte, versionado en el repositorio como módulos curados (`features/catalog/domain/destinations.ts`, `experiences.ts` y el nuevo `transport-options.ts`) que `scripts/db-seed.mjs` siembra en Neon, de modo que lo revisado es exactamente lo que carga la base: `catalog-repository.ts` lee solo de PostgreSQL y no tiene fallback a las constantes, así que la revisión no puede quedar desalineada en silencio. Cada afirmación logística sensible expone su estado con el campo `confidence`: los datos confirmados por una fuente quedan en `verified`, las duraciones de referencia en `estimated` y lo que no se pudo confirmar en `needs_verification`, y la presentación ya traduce esos estados a los badges "Dato verificado" / "Dato estimado" / "Datos por confirmar" sin promover una estimación a hecho. Los cinco corredores del Tren Solar (`tr-maimara-tilcara`, `tr-posta-hornillos-maimara`, `tr-purmamarca-maimara`, `tr-maimara-purmamarca`, `tr-tilcara-purmamarca`) son deliberadamente mixtos: el corredor está confirmado por el operador —por eso son `verified`— mientras que duración y tarifa quedan en `null`, nunca en `0`, con `scheduleNotes` que remite a la verificación oficial para la fecha elegida, y esa distinción es la que la UI muestra al señalar el dato faltante en lugar de inventarlo. Se eliminó un fixture engañoso: la experiencia `exp-posta-hornillos-museo` ("Museo y capilla de la Posta de Hornillos", `estimated`, fuente de la Secretaría de Turismo de Jujuy) duplicaba el sitio ya cubierto por `exp-posta-hornillos` (`verified`) y no existía en la base, así que se borró y quedó una sola entrada por lugar; con eso el reparto equilibrado pasa a agendar 9 experiencias y a dejar 6 afuera con su motivo explícito, y la aserción de conteo de `distribute-experiences.test.ts` se ajustó a 6 para que ninguna experiencia desaparezca en silencio. Los enlaces de fuente se comprobaron uno por uno con `curl -s -o /dev/null -w '%{http_code}' -L --max-time 20`: los 10 devolvieron 200, entre ellos los de la Comisión de Filmaciones de Jujuy, la Facultad de Filosofía y Letras (UBA) para Tilcara, `trensolar.com.ar`, la Secretaría de Turismo de Jujuy y los cinco PDF de catálogos y manuales; los `sourceUrl` quedan como referencia y no se renderizan como texto en la UI. La UI pública no contiene mensajes de desarrollo: un barrido de `TODO`, `FIXME`, `XXX`, `HACK`, `Lorem`, `mock`, `fixture`, `coming soon`, `próximamente`, `WIP`, `dummy` y equivalentes sobre todos los `*.tsx` de `app/` y `features/` no encontró coincidencias, "Catálogo de demostración" aparece solo en archivos `.test`, y no hay condicionales por `NODE_ENV`, `process.env`, `isDev` ni `devOnly` en código de UI; los dos casos que parecían sospechosos se descartaron por inspección: `console.error(error)` en `PlannerForm.tsx:480` es la rama de fallo de red que además muestra un mensaje al usuario, y "Duración por confirmar" (`ItineraryBlockItem.tsx:34`) es copy de producto para un dato estimado, no un placeholder. Cierre de verificaciones: `pnpm run lint`, `pnpm run typecheck`, `pnpm run test` (218 pruebas) y `pnpm run build` pasan. Observación fuera de alcance, no corregida: `PlannerForm.tsx` es un client component e importa `DESTINATIONS` para armar los selects de origen y alojamiento, con lo que el catálogo curado viaja al navegador en lugar de recibirse del servidor; conviene revisarlo en un ticket aparte.
 
 ### QTR-030 — Preparar deployment y checklist de entrega
 
@@ -400,12 +412,22 @@ Verificado el 2026-11-11: `features/planner/components/PlannerForm.tsx` cierra e
 - **Depende de:** QTR-002, QTR-003, QTR-009, QTR-023, QTR-028, QTR-029
 - **Resultado:** demo pública y checklist de presentación.
 - **Criterios de aceptación:**
-  - [ ] Build de producción pasa.
+  - [X] Build de producción pasa.
   - [ ] La demo funciona sin configuración local especial ni secretos expuestos.
-  - [ ] Se documenta configuración de DB y variables necesarias para deploy.
+  - [X] Se documenta configuración de DB y variables necesarias para deploy.
   - [ ] El repositorio queda público si así lo exige la hackatón.
   - [ ] Se prepara un guion/video de hasta 3 minutos si ese requisito sigue vigente en las bases.
-  - [ ] Se registran las métricas reales recogidas con usuarios, o se declara explícitamente que aún no hay datos.
+  - [X] Se registran las métricas reales recogidas con usuarios, o se declara explícitamente que aún no hay datos.
+
+Estado al 2026-11-14: `pnpm run build` pasa sin variables de entorno y la
+configuración de deploy quedó documentada en la sección "Despliegue" de
+`README.md` (variables en Vercel, migraciones y seed como pasos explícitos fuera
+del build, y reglas para no exponer credenciales). Todavía no se registraron
+métricas de usuarios: no se realizaron entrevistas ni sesiones de prueba con
+personas fuera del equipo, así que no hay datos que reportar. Queda pendiente,
+por requerir acciones fuera del repositorio: desplegar en Vercel, verificar la
+URL pública con el catálogo cargado, decidir la visibilidad del repositorio según
+las bases de la hackatón y, si el requisito sigue vigente, grabar el video.
 
 ---
 
