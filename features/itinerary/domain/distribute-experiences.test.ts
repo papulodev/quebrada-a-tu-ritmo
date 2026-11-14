@@ -730,17 +730,42 @@ describe("distributeExperiences", () => {
 
     expect(distribution.days.map((day) => day.dayNumber)).toEqual([1, 2, 3]);
     const lengths = distribution.days.map((day) => day.blocks.length);
-    expect(lengths).toEqual([5, 5, 0]);
-    expect(distribution.unscheduled).toEqual([]);
-    expect(distribution.warnings).toHaveLength(5);
-    expect(distribution.warnings).toContain(
-      "Algunas actividades del itinerario no tienen duración estimada en el catálogo, así que el tiempo total de esos días no se puede confirmar.",
+    expect(lengths).toEqual([4, 5, 5]);
+
+    // Every curated experience is either scheduled or explicitly unscheduled:
+    // nothing disappears silently.
+    const scheduledIds = distribution.days.flatMap((day) =>
+      day.blocks
+        .filter((block) => block.kind === "visit")
+        .map((block) => block.id),
     );
-    expect(distribution.warnings).toContain(
+    const unscheduledIds = distribution.unscheduled.map(
+      ({ experience }) => experience.id,
+    );
+    expect(scheduledIds).toHaveLength(9);
+    expect(unscheduledIds).toHaveLength(6);
+    expect(new Set([...scheduledIds, ...unscheduledIds])).toEqual(
+      new Set(EXPERIENCES.map(({ id }) => id)),
+    );
+
+    // The 540-minute experience cannot fit a balanced day, and says why.
+    expect(
+      distribution.unscheduled.find(
+        ({ experience }) => experience.id === "exp-tren-solar-360",
+      )?.reason,
+    ).toBe(
+      "La duración estimada de Experiencia 360° del Tren Solar (540 minutos) no entra en un día con ritmo equilibrado.",
+    );
+
+    // With every day populated, the empty-day warning must not appear.
+    expect(distribution.warnings).not.toContain(
       "Quedaron días del viaje sin actividades asignadas.",
     );
+
+    // Intra-day transfers without a confirmed duration are surfaced.
+    expect(distribution.warnings).toHaveLength(5);
     expect(distribution.warnings).toContain(
-      "El traslado de Tilcara a Purmamarca no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
+      "El traslado de Purmamarca a Tilcara no tiene duración confirmada en el catálogo, así que esa combinación de actividades no se puede declarar confirmada.",
     );
   });
 
