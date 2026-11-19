@@ -16,6 +16,7 @@
   "dependencies": {
     "@neon/config": "^1.9.5",
     "@vercel/functions": "^3.10.4",
+    "lucide-react": "^1.72.0",
     "next": "16.4.3",
     "pg": "^8.23.1",
     "react": "19.3.0",
